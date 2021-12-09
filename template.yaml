@@ -55,7 +55,7 @@ Resources:
   MyRiskFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: SolaceRiskMyRiskFunction
+      FunctionName: SolaceRiskDataMyRiskFunction
       Handler: api/riskfunction/get.handler
       Runtime: nodejs14.x
       MemorySize: 128
@@ -106,9 +106,14 @@ Resources:
             Statement:
               - Effect: Allow
                 Action:
-                  - "sns:*"
-                  - "s3:*"
-                  - "lambda:*"
-                  - "dynamodb:*"
-                  - "sqs:*"
-                Resource: "*"
+                  - "sns:Publish"
+                Resource: "arn:aws:sns:us-west-2:151427405638:DeadLetterSnsTopic"
+              - Effect: Allow
+                Action:
+                  - "s3:GetObject"
+                  - "s3:DeleteObject"
+                  - "s3:ListBucket"
+                  - "s3:PutObject"
+                  - "s3:ReplicateObject"
+                  - "s3:RestoreObject"
+                Resource: "arn:aws:s3:::risk-data.solace.fi.data/*"
