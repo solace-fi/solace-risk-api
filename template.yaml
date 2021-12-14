@@ -52,11 +52,11 @@ Resources:
             Path: /
             Method: options
             RestApiId: !Ref RestApi
-  MyRiskFunction:
+  GetScoresFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: SolaceRiskDataMyRiskFunction
-      Handler: api/riskfunction/get.handler
+      FunctionName: SolaceRiskDataGetScoresFunction
+      Handler: api/scores/get.handler
       Runtime: python3.8
       MemorySize: 128
       Timeout: 60
@@ -65,7 +65,7 @@ Resources:
         GetEvent:
           Type: Api
           Properties:
-            Path: /riskfunction
+            Path: /scores
             Method: get
             RestApiId: !Ref RestApi
   # Data Bucket

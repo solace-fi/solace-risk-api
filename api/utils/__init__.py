@@ -77,6 +77,7 @@ headers = {
 }
 
 alchemy_key = s3_get("alchemy_key.txt", cache=True)
+w3 = Web3(Web3.HTTPProvider("https://eth-mainnet.alchemyapi.io/v2/{}".format(alchemy_key)))
 alchemy_mainnet_key = ""
 ETH_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
 
