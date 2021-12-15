@@ -15,7 +15,7 @@ from eth_account import Account
 import asn1tools
 
 DATA_BUCKET = os.environ.get("DATA_BUCKET", "risk-data.solace.fi.data")
-DEAD_LETTER_TOPIC = os.environ.get("DEAD_LETTER_TOPIC", "arn:aws:sns:us-west-2:151427405638:DeadLetterSnsTopic")
+DEAD_LETTER_TOPIC = os.environ.get("DEAD_LETTER_TOPIC", "arn:aws:sns:us-west-2:151427405638:RiskDataDeadLetterQueue")
 
 s3_client = boto3.client("s3", region_name="us-west-2")
 sns_client = boto3.client("sns", region_name="us-west-2")
