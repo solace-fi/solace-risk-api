@@ -12,11 +12,11 @@ Globals:
     Tracing: Active
     Environment:
       Variables:
-        DEAD_LETTER_TOPIC: arn:aws:sns:us-west-2:151427405638:DeadLetterSnsTopic
+        DEAD_LETTER_TOPIC: arn:aws:sns:us-west-2:151427405638:RiskDataDeadLetterQueue
         DATA_BUCKET: risk-data.solace.fi.data
     DeadLetterQueue:
       Type: SNS
-      TargetArn: arn:aws:sns:us-west-2:151427405638:DeadLetterSnsTopic
+      TargetArn: arn:aws:sns:us-west-2:151427405638:RiskDataDeadLetterQueue
   Api:
     Cors:
       AllowMethods: "'OPTIONS,GET,POST,PUT,DELETE'"
@@ -86,6 +86,12 @@ Resources:
               - "*"
             AllowedHeaders:
               - "*"
+  # SNS Dead Letter Topic
+  DeadLetterTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: Solace Risk Data Dead Letter Queue
+      TopicName: RiskDataDeadLetterQueue
   LambdaExecutionRole:
     Type: AWS::IAM::Role
     Properties:
@@ -107,7 +113,7 @@ Resources:
               - Effect: Allow
                 Action:
                   - "sns:Publish"
-                Resource: "arn:aws:sns:us-west-2:151427405638:DeadLetterSnsTopic"
+                Resource: "arn:aws:sns:us-west-2:151427405638:RiskDataDeadLetterQueue"
               - Effect: Allow
                 Action:
                   - "s3:GetObject"
