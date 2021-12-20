@@ -52,6 +52,22 @@ Resources:
             Path: /
             Method: options
             RestApiId: !Ref RestApi
+  FaviconFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataFaviconFunction
+      Handler: api/favicon/get.handler
+      Runtime: python3.8
+      MemorySize: 128
+      Timeout: 3
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /favicon.ico
+            Method: get
+            RestApiId: !Ref RestApi
   GetScoresFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -59,7 +75,7 @@ Resources:
       Handler: api/scores/get.handler
       Runtime: python3.8
       MemorySize: 128
-      Timeout: 60
+      Timeout: 600
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
         GetEvent:
