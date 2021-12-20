@@ -18,41 +18,87 @@ def verify_params(params):
         "account": verify_account(params)
     }
 
+def fetch_eth_price():
+    try:
+        url = f"https://api.zapper.fi/v1/prices/0x0000000000000000000000000000000000000000?network=ethereum&timeFrame=hour&currency=USD&api_key=96e0cc51-a62e-42ca-acee-910ea7d2a241"
+        response = requests.get(url, timeout=600)
+        response.raise_for_status()
+        res = response.json()
+        # gives prices over the last hour, average
+        prices = res["prices"]
+        count = 0
+        s = 0
+        for price in prices:
+            count += 1
+            s += price[1]
+        price = s / count
+        if price <= 1000 or price >= 10000:
+            throw("price out of range")
+        return price
+    except Exception as e:
+        print(e)
+        raise Exception("error fetching data")
+
 def fetch_positions(params):
     try:
         api_key = "96e0cc51-a62e-42ca-acee-910ea7d2a241" # only key key, public
         url = f"https://api.zapper.fi/v1/balances?api_key={api_key}&addresses[]={params['account']}"
-        response = requests.get(url, timeout=300)
+        response = requests.get(url, timeout=600)
         response.raise_for_status()
         return response.text
     except Exception as e:
         print(e)
         raise Exception("error fetching data")
 
-def parse_positions(s, account):
+def parse_positions(s):
     try:
         positions = []
-        account = account.lower()
         while True:
             index = s.find('{')
             index2 = s.find('}\n')
             if index == -1 or index2 == -1:
                 break
             position = json.loads(s[index:index2+1])
-            # filter out zero balance positions
-            if len(position["balances"][account]["products"]) > 0:
-                positions.append(position)
+            positions.append(position)
             s = s[index2+1:]
+        # order by network, app
+        positions = list(sorted(positions, key = lambda pos: f"{pos['network']} {pos['appId']}"))
         return positions
+    except Exception as e:
+        raise Exception("error parsing data")
+
+def clean_positions(positions2, account):
+    eth_price = fetch_eth_price()
+    try:
+        positions3 = []
+        account = account.lower()
+        for position in positions2:
+            # filter out zero balance positions
+            if len(position["balances"][account]["products"]) == 0:
+                continue
+            # filter out nfts and tokens
+            if position["appId"] == "tokens" or position["appId"] == "nft":
+                continue
+            # flatten
+            balanceUSD = 0
+            for pos in position["balances"][account]["products"]:
+                for asset in pos["assets"]:
+                    balanceUSD += asset["balanceUSD"]
+            position["balanceUSD"] = balanceUSD
+            position["balanceETH"] = balanceUSD / eth_price
+            position.pop("balances", None)
+            positions3.append(position)
+        return positions3
     except Exception as e:
         raise Exception("error parsing data")
 
 def get_scores(params):
     params2 = verify_params(params)
     positions = fetch_positions(params2)
-    positions = parse_positions(positions, params2["account"])
+    positions2 = parse_positions(positions)
+    positions3 = clean_positions(positions2, params2["account"])
     # TODO: positions -> scores
-    return json.dumps(positions, indent=2)
+    return json.dumps(positions3, indent=2)
 
 def handler(event, context):
     try:
