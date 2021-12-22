@@ -92,13 +92,25 @@ def clean_positions(positions2, account):
     except Exception as e:
         raise Exception("error parsing data")
 
+def calculate_weights(positions):
+    try:
+        weighted_positions = []
+        balance_sum = sum([position["balanceETH"] for position in positions])
+        for position in positions:
+            weighted_position = {"protocol": position["appId"], "weight": position["balanceETH"] / balance_sum}
+            weighted_positions.append(weighted_position)
+        return weighted_positions
+    except Exception as e:
+        raise Exception(f"error calculating weights. Error: {e}")
+
 def get_scores(params):
     params2 = verify_params(params)
     positions = fetch_positions(params2)
     positions2 = parse_positions(positions)
     positions3 = clean_positions(positions2, params2["account"])
+    positions4 = calculate_weights(positions3)
     # TODO: positions -> scores
-    return json.dumps(positions3, indent=2)
+    return json.dumps(positions4, indent=2)
 
 def handler(event, context):
     try:
