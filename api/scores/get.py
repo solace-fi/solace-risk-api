@@ -269,7 +269,7 @@ def get_scores(params):
         # Table data 
         # TODO: ftw this is putting in escape characters!
         balanceByTier['json'] = balanceByTier.to_json(orient='records', lines=True).splitlines()       
-        rateOut = {'address': accountIn,'addressRP':TotalRate,'currentRate':Rate_percentage,'positions': balanceByTier['json'].head().to_dict(),}
+        rateOut = {'address': accountIn,'addressRP':TotalRate,'currentRate':Rate_percentage,'positions': list(map(json.loads, balanceByTier['json'].tolist()))}
         return rateOut
 
     #comment out line for lambda
