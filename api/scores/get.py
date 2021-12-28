@@ -269,18 +269,12 @@ def get_scores(params):
         # Table data 
         # TODO: ftw this is putting in escape characters!
         balanceByTier['json'] = balanceByTier.to_json(orient='records', lines=True).splitlines()       
-        rateOut = {'address': accountIn,'addressRP':TotalRate,'currentRate':Rate_percentage,'positions': list(map(json.loads, balanceByTier['json'].tolist()))}
+        rateOut = {'address': accountIn,'addressRP':TotalRate,'currentRate':Rate_percentage,'protocols': list(map(json.loads, balanceByTier['json'].tolist()))}
         return rateOut
 
-    #comment out line for lambda
-    params2 = params["account"]
-    # uncomment out line for lambda
-    #params2 = verify_params(params)
-    positions = fetch_positions(params)
-    positions2 = parse_positions(positions)
-    positions3 = clean_positions(positions2, params2)
-    # positions4 = calculate_weights(positions3)
     # TODO: Lock in on field names for network and appId as these arent ideal atm
+    if len(positions3) == 0:
+        return {'address': params2, 'protocols': positions3}
     for i in positions3:
         i['address'] = i['appId']
         i['symbol'] = i['network']
