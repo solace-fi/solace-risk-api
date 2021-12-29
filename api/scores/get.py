@@ -142,7 +142,7 @@ def get_scores(params):
         
         # uncomment for lambda
         #s3_put("to-be-scored/"+date_string+"/"+accountIn+".json", json.dumps(outputUnknownProtocols))
-        scored_portfolio['tier'] = scored_portfolio['tier'].replace(np.nan, 'tier4')  # sets unknown protocol to highest risk tier 
+        scored_portfolio['tier'] = scored_portfolio['tier'].replace(np.nan, 0)  # sets unknown protocol to highest risk tier 
 
         # aggregate portfolio positions by tier
         combinedTable = pd.merge(scored_portfolio,rateTableInput, left_on='tier', right_on='tier',how='left')
