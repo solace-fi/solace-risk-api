@@ -114,24 +114,36 @@ def get_scores(params):
     positions2 = parse_positions(positions)
     positions3 = clean_positions(positions2, params2["account"])
     positions4 = calculate_weights(positions3)
+    # TODO: Lock in on field names for appId as 'address' isn't ideal atm
+    if len(positions3) == 0:
+        return {'address': params2["account"], 'protocols': positions3}
+    for i in positions3:
+        i['address'] = i['appId']
+        i['symbol'] = i['network']
+        del i['appId']
+        del i['network']
+    
+
     # local functions
     #
     def get_protocol(accountIn, portfolioInput, protocolMapInput, rateTableInput):
         # Left join protocols in account with known protocol tiers then remove nans
         scored_portfolio = pd.merge(portfolioInput,protocolMapInput, left_on='address', right_on='address',how='left')
-        #print(scored_portfolio) # TODO save this off to S3 but also need account number
-        scored_portfolio['tier'] = scored_portfolio['tier'].replace(np.nan, 'tier4')  # sets unknown protocol to highest risk tier 
+        #scored_portfolio['tier'] = scored_portfolio['tier'].replace(np.nan, 'tier4')  # sets unknown protocol to highest risk tier 
         # log unknown protocols to S3
-        inds = pd.isnull(scored_portfolio['tier']).to_numpy().nonzero()
+        #inds = pd.isnull(scored_portfolio['tier']).to_numpy().nonzero()
         indexInScoringDb = list(scored_portfolio.loc[pd.isna(scored_portfolio["tier"]), :].index)
         unknownProtocols = scored_portfolio.loc[indexInScoringDb, 'address']
         outputUnknownProtocols=[]
-        for i in unknownProtocols:
-            outputUnknownProtocols.append(i)
-        date_string = datetime.now(). strftime("%Y-%m-%d")
-        # uncomment for lambda
-        s3_put("to-be-scored/"+date_string+"/"+accountIn+".json", json.dumps(outputUnknownProtocols))
+        if unknownProtocols.shape[0] > 0:
+            outputUnknownProtocols = unknownProtocols.to_list()
+            date_string = datetime.now(). strftime("%Y-%m-%d")
+            s3_put("to-be-scored/"+date_string+"/"+accountIn+".json", json.dumps(outputUnknownProtocols))
         
+        # uncomment for lambda
+        #s3_put("to-be-scored/"+date_string+"/"+accountIn+".json", json.dumps(outputUnknownProtocols))
+        scored_portfolio['tier'] = scored_portfolio['tier'].replace(np.nan, 'tier4')  # sets unknown protocol to highest risk tier 
+
         # aggregate portfolio positions by tier
         combinedTable = pd.merge(scored_portfolio,rateTableInput, left_on='tier', right_on='tier',how='left')
         rp_column = combinedTable['balanceUSD'] * combinedTable["rrol"]
@@ -207,10 +219,6 @@ def get_scores(params):
         s3_put("asked-for-quote/"+date_string+"/"+accountIn+".json", json.dumps(positions))
         
         # Get the published rate data and create dataframes
-        correlMatJson_file = s3_get("current-rate-data/correlMat.json")
-        correlMatJson_object = json.loads(correlMatJson_file)
-        correlMat = pd.DataFrame(correlMatJson_object)
-
         correlCat_file = s3_get("current-rate-data/correlCat.json")
         correlCatJson_object = json.loads(correlCat_file)
         correlCat = pd.DataFrame(correlCatJson_object)
@@ -231,11 +239,11 @@ def get_scores(params):
         # Init a dataframe to store an account's positions
         
         portfolio = pd.DataFrame(positions)
-        portfolio.columns =['balance', 'balanceUSD','address', 'network']
+        portfolio.columns =['balanceUSD', 'balance','address', 'network']
 
         #Portfolio of protocols
         balanceByTier = get_protocol(accountIn, portfolio, protocolMap, rateTable)
-        balanceByTier['category'] = balanceByTier['category'].replace(np.nan, 'amm')  
+        balanceByTier['category'] = balanceByTier['category'].replace(np.nan, 'unrated')  
 
         #print(balanceByTier)
 
@@ -267,19 +275,10 @@ def get_scores(params):
         Rate_percentage=TotalRate/BalanceTotal
 
         # Table data 
-        # TODO: ftw this is putting in escape characters!
         balanceByTier['json'] = balanceByTier.to_json(orient='records', lines=True).splitlines()       
         rateOut = {'address': accountIn,'addressRP':TotalRate,'currentRate':Rate_percentage,'protocols': list(map(json.loads, balanceByTier['json'].tolist()))}
         return rateOut
 
-    # TODO: Lock in on field names for network and appId as these arent ideal atm
-    if len(positions3) == 0:
-        return {'address': params2, 'protocols': positions3}
-    for i in positions3:
-        i['address'] = i['appId']
-        i['symbol'] = i['network']
-        del i['appId']
-        del i['network']
     
     rateCard = rate_engine(params["account"],positions3) 
     #print(rateCard)
