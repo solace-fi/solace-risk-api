@@ -128,12 +128,12 @@ def get_scores(params):
     #
     def get_protocol(accountIn, portfolioInput, protocolMapInput, rateTableInput):
         # Left join protocols in account with known protocol tiers then remove nans
-        scored_portfolio = pd.merge(portfolioInput,protocolMapInput, left_on='address', right_on='address',how='left')
+        scored_portfolio = pd.merge(portfolioInput,protocolMapInput, left_on='protocol', right_on='protocol',how='left')
         #scored_portfolio['tier'] = scored_portfolio['tier'].replace(np.nan, 'tier4')  # sets unknown protocol to highest risk tier 
         # log unknown protocols to S3
         #inds = pd.isnull(scored_portfolio['tier']).to_numpy().nonzero()
         indexInScoringDb = list(scored_portfolio.loc[pd.isna(scored_portfolio["tier"]), :].index)
-        unknownProtocols = scored_portfolio.loc[indexInScoringDb, 'address']
+        unknownProtocols = scored_portfolio.loc[indexInScoringDb, 'protocol']
         outputUnknownProtocols=[]
         if unknownProtocols.shape[0] > 0:
             outputUnknownProtocols = unknownProtocols.to_list()
@@ -239,7 +239,7 @@ def get_scores(params):
         # Init a dataframe to store an account's positions
         
         portfolio = pd.DataFrame(positions)
-        portfolio.columns =['balanceUSD', 'balance','address', 'network']
+        portfolio.columns =['balanceUSD', 'balance','protocol', 'network']
 
         #Portfolio of protocols
         balanceByTier = get_protocol(accountIn, portfolio, protocolMap, rateTable)
