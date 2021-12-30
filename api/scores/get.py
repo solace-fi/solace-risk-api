@@ -25,10 +25,15 @@ def calculate_weights(positions):
 
 def get_scores(event):
     account, positions = verify_positions(event["body"])
-    positions4 = calculate_weights(positions)
-    # TODO: Lock in on field names for appId as 'address' isn't ideal atm
+    #Check for empty porfolio
     if len(positions) == 0:
-        return json.dumps({'address': account, 'protocols': []})
+        return json.dumps({'address': account, 'protocols': []},indent=2)
+    # TODO: Lock in on field names for appId as 'address' isn't ideal atm
+    for i in positions:
+        i['address'] = i['appId']
+        i['symbol'] = i['network']
+        del i['appId']
+        del i['network']
 
     # local functions
     #
@@ -187,7 +192,6 @@ def get_scores(event):
 
 
     rateCard = rate_engine(account, positions)
-    #print(rateCard)
     return json.dumps(rateCard, indent=2)
 
 def handler(event, context):
