@@ -68,6 +68,22 @@ Resources:
             Path: /favicon.ico
             Method: get
             RestApiId: !Ref RestApi
+  GetBalancesFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataGetBalancesFunction
+      Handler: api/balances/get.handler
+      Runtime: python3.8
+      MemorySize: 128
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /balances
+            Method: get
+            RestApiId: !Ref RestApi
   GetScoresFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -82,7 +98,7 @@ Resources:
           Type: Api
           Properties:
             Path: /scores
-            Method: get
+            Method: post
             RestApiId: !Ref RestApi
   # Data Bucket
   DataBucket:
