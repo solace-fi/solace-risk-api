@@ -185,6 +185,10 @@ def get_scores(event):
         TotalRate=RpTotal+TotalScore
         Rate_percentage=TotalRate/BalanceTotal
 
+        # TODO: remove when input format is locked. 
+        # Clean up column name for return data DIRTFT FTW
+        balanceByTier.rename(columns={'protocol': 'appId'}, inplace=True)
+
         # Table data
         balanceByTier['json'] = balanceByTier.to_json(orient='records', lines=True).splitlines()
         rateOut = {'address': accountIn,'addressRP':TotalRate,'currentRate':Rate_percentage,'protocols': list(map(json.loads, balanceByTier['json'].tolist()))}
