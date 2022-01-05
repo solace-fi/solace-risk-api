@@ -11,6 +11,7 @@ To create a new function or update the infrastructure, add it as infrastructure 
 
 You can locally deploy the API and test against it.
 ``` bash
+sam build --use-container
 sam local start-api -p 3001
 curl http://localhost:3001/riskfunction/
 ```
