@@ -1,5 +1,5 @@
 # solace-risk-data
-a
+
 ### development and deployment
 
 Install the AWS SAM CLI  
