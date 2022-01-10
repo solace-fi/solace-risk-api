@@ -144,22 +144,13 @@ def get_scores(event):
         s3_put("asked-for-quote/"+date_string+"/"+accountIn+".json", json.dumps(positions))
 
         # Get the published rate data and create dataframes
-        correlCat_file = s3_get("current-rate-data/correlCat.json")
-        correlCatJson_object = json.loads(correlCat_file)
-        correlCat = pd.DataFrame(correlCatJson_object)
+        series_file = s3_get("current-rate-data/series.json")
+        seriesJson_object = json.loads(series_file)
+        rateTable = pd.DataFrame(seriesJson_object['data']['rateCard'])
+        correlCat = pd.DataFrame(seriesJson_object['data']['correlCat'])
+        protocolMap = pd.DataFrame(seriesJson_object['data']['protocolMap'])
+        correlValue = pd.DataFrame(seriesJson_object['data']['corrValue'])
 
-        protocolMap_file = s3_get("current-rate-data/protocolMap.json")
-        protocolMap__object = json.loads(protocolMap_file)
-        protocolMap = pd.DataFrame(protocolMap__object)
-
-        # Get corr Value from S3
-        corrValueFile = s3_get("current-rate-data/corrValue.json") # will be from S3 not local
-        corrValueJson_object = json.loads(corrValueFile)
-        correlValue=pd.DataFrame(corrValueJson_object)
-
-        rateTableJson_file = s3_get("current-rate-data/rateTable.json")
-        rateTableJson_object = json.loads(rateTableJson_file)
-        rateTable = pd.DataFrame(rateTableJson_object)
 
         # Init a dataframe to store an account's positions
 
@@ -201,7 +192,7 @@ def get_scores(event):
         #print(df3)
         # Table data
         balanceByTier['json'] = balanceByTier.to_json(orient='records', lines=True).splitlines()
-        rateOut = {'address': accountIn,'addressRP':TotalRate,'currentRate':Rate_percentage,'protocols': list(map(json.loads, balanceByTier['json'].tolist()))}
+        rateOut = {'address': accountIn,'addressRP':TotalRate,'currentRate':Rate_percentage,'protocols': list(map(json.loads, balanceByTier['json'].tolist())),'metadata':seriesJson_object['metadata']}
         return rateOut
 
 
