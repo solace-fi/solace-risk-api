@@ -100,6 +100,20 @@ Resources:
             Path: /scores
             Method: post
             RestApiId: !Ref RestApi
+  SoteriaScoreTrackerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataTrackScoresFunction
+      Handler: api/tracks/get.handler
+      Runtime: python3.8
+      MemorySize: 1024
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(60 minutes)
   # Data Bucket
   DataBucket:
     Type: AWS::S3::Bucket

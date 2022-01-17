@@ -24,8 +24,7 @@ def calculate_weights(positions):
     except Exception as e:
         raise Exception(f"error calculating weights. Error: {e}")
 
-def get_scores(event):
-    account, positions = verify_positions(event["body"])
+def get_scores(account, positions):
     #Check for empty porfolio
     if len(positions) == 0:
         return json.dumps({'address': account, 'protocols': []},indent=2)
@@ -43,7 +42,7 @@ def get_scores(event):
         for i in unknownProtocols:
             outputUnknownProtocols = unknownProtocols.to_list()
             outputUnknownProtocols.append(i)
-            date_string = datetime.now(). strftime("%Y-%m-%d")
+            date_string = datetime.now().strftime("%Y-%m-%d")
             #s3_put("to-be-scored/"+date_string+"/"+accountIn+".json", json.dumps(outputUnknownProtocols))
 
         # uncomment for lambda
@@ -202,7 +201,8 @@ def get_scores(event):
 #comment
 def handler(event, context):
     try:
-        response_body = get_scores(event)
+        account, positions = verify_positions(event["body"])
+        response_body = get_scores(account, positions)
         return {
             "statusCode": 200,
             "body": response_body,
