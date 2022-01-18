@@ -5,22 +5,23 @@ import numpy as np
 import json
 import math
 
-def verify_account(params):
+
+def verify_account(params, cfg):
     if "account" not in params:
         raise InputException("missing account") # check policy id exists
     try:
-        addr = w3.toChecksumAddress(params["account"])
-        if not w3.isAddress(addr):
+        addr = cfg['w3'].toChecksumAddress(params["account"])
+        if not cfg['w3'].isAddress(addr):
             raise "invalid address"
         return addr
     except Exception as e:
         raise InputException(f"invalid account: '{params['account']}'") # check policy id exists
 
-def verify_params(params):
+def verify_params(params, cfg):
     if params is None:
         raise InputException("missing params")
     return {
-        "account": verify_account(params)
+        "account": verify_account(params, cfg)
     }
 
 def fetch_eth_price():
@@ -39,7 +40,7 @@ def fetch_eth_price():
                 s += price[1]
             price = s / count
             if price <= 1000 or price >= 10000:
-                throw("price out of range")
+                raise("price out of range")
             return price
         except Exception as e:
             print(e)
@@ -57,7 +58,7 @@ def fetch_positions(params):
             print(e)
     raise Exception("error fetching data")
 
-def parse_positions(s):
+def parse_positions(s, network):
     try:
         positions = []
         while True:
@@ -69,6 +70,8 @@ def parse_positions(s):
             positions.append(position)
             s = s[index2+1:]
         # order by network, app
+        if network is not None:
+            positions = list(filter(lambda position: position['network'] == network, positions))
         positions = list(sorted(positions, key = lambda pos: f"{pos['network']} {pos['appId']}"))
         return positions
     except Exception as e:
@@ -111,9 +114,16 @@ def calculate_weights(positions):
         raise Exception(f"error calculating weights. Error: {e}")
 
 def get_balances(params):
-    params2 = verify_params(params)
+    network = None
+    if 'chainId' not in params:
+        raise InputException(f"Bad request. Chain id is not provided")
+    network = get_network(params['chainId'])
+    if network is None:
+        raise InputException(f"Bad request. Network name is not found for chain id: {params['chainId']}")
+    cfg = get_config(params['chainId'])
+    params2 = verify_params(params, cfg)
     positions = fetch_positions(params2)
-    positions2 = parse_positions(positions)
+    positions2 = parse_positions(positions, network)
     positions3 = clean_positions(positions2, params2["account"])
     return json.dumps(positions3)
 

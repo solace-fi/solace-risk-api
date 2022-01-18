@@ -77,7 +77,6 @@ headers = {
 }
 
 alchemy_key = s3_get("alchemy_key.txt", cache=True)
-w3 = Web3(Web3.HTTPProvider("https://eth-mainnet.alchemyapi.io/v2/{}".format(alchemy_key)))
 alchemy_mainnet_key = ""
 ETH_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
 
@@ -90,3 +89,42 @@ SOLACE_ADDRESS = "0x501acE9c35E60f03A2af4d484f49F9B1EFde9f40"
 xSOLACE_ADDRESS = "0x501AcE5aC3Af20F49D53242B6D208f3B91cfc411"
 erc20Json = json.loads(s3_get("abi/other/ERC20.json", cache=True))
 ONE_ETHER = 1000000000000000000
+
+# chainId => network
+NETWORKS = {'1': 'ethereum', '4': 'rinkeby'}
+
+def get_config(chainId: str):
+    config_s3 = json.loads(s3_get('config.json'))
+    if chainId in config_s3:
+        cfg = config_s3[chainId]
+        w3 = Web3(Web3.HTTPProvider(cfg["alchemyUrl"].format(alchemy_key)))
+        cfg["w3"] = w3
+
+        if len(cfg['soteria']) > 0:
+            soteriaABI = json.loads(s3_get('abi/soteria/SoteriaCoverageProduct.json', cache=True))
+            soteriaContract = w3.eth.contract(address=cfg["soteria"], abi=soteriaABI)
+            cfg["soteriaContract"] = soteriaContract
+        return cfg
+    else:
+        return None
+
+def get_network(chainId: str) -> str:
+    if chainId in NETWORKS:
+        return NETWORKS[chainId]
+    return None
+
+def get_soteria_policy_holders(chainId: str) -> list:
+    cfg = get_config(chainId)
+    if cfg is None:
+        raise InputException(f"Bad request. Not found config for the chain id: {chainId}")
+
+    # TODO: make contract call
+    policyholder1 = {
+        "address": "0x09748F07b839EDD1d79A429d3ad918f670D602Cd",
+        "coverLimit": 1000,
+    }
+    policyholder2 = {
+        "address": "0x11BB97923209Df97E8c9839E1e394798cb0C0336",
+        "coverLimit": 2000,
+    }
+    return [policyholder1, policyholder2]
