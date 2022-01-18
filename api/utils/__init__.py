@@ -92,10 +92,13 @@ ONE_ETHER = 1000000000000000000
 
 # chainId => network
 NETWORKS = {'1': 'ethereum', '4': 'rinkeby'}
+config_s3 = json.loads(s3_get('config.json', cache=True))
+
+def get_supported_chains():
+    return config_s3['supported_chains']
 
 def get_config(chainId: str):
-    config_s3 = json.loads(s3_get('config.json'))
-    if chainId in config_s3:
+    if chainId in get_supported_chains():
         cfg = config_s3[chainId]
         w3 = Web3(Web3.HTTPProvider(cfg["alchemyUrl"].format(alchemy_key)))
         cfg["w3"] = w3

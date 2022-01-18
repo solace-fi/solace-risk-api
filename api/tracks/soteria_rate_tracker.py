@@ -45,7 +45,7 @@ async def store_rate(address: str, chainId: str, coverLimit: float, score: any):
     
 
 async def track_policy_rates():
-    for chainId in CHAIN_IDS:
+    for chainId in get_supported_chains():
         policyholders = get_soteria_policy_holders(chainId)
         tasks = []
         for policyholder in policyholders:
