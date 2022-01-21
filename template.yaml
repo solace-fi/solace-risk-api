@@ -104,7 +104,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: SolaceRiskDataTrackScoresFunction
-      Handler: api/tracks/get.handler
+      Handler: api/tracks/soteria_rate_tracker.main
       Runtime: python3.8
       MemorySize: 1024
       Timeout: 600
@@ -114,6 +114,20 @@ Resources:
           Type: Schedule
           Properties:
             Schedule: rate(60 minutes)
+  SoteriaBillingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataTrackScoresFunction
+      Handler: api/billing/soteria_billing_calculator.main
+      Runtime: python3.8
+      MemorySize: 1024
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 0 17 ? * FRI *)
   # Data Bucket
   DataBucket:
     Type: AWS::S3::Bucket

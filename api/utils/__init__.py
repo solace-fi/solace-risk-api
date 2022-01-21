@@ -1,10 +1,12 @@
 # globally used stuff goes here
 
 import json
+from typing import List
 import boto3
 import os
 import sys
 from datetime import datetime
+from calendar import monthcalendar
 import requests
 
 import web3
@@ -16,10 +18,17 @@ import asn1tools
 
 DATA_BUCKET = os.environ.get("DATA_BUCKET", "risk-data.solace.fi.data")
 DEAD_LETTER_TOPIC = os.environ.get("DEAD_LETTER_TOPIC", "arn:aws:sns:us-west-2:151427405638:RiskDataDeadLetterQueue")
+S3_SOTERIA_SCORES_FOLDER = 'soteria-scores/'
+S3_BILLINGS_FOLDER = 'soteria-billings/'
+S3_BILLINGS_FILE = 'billings.json'
+S3_BILLING_ERRORS_FILE = 'billing_errors.json'
+S3_TO_BE_SCORED_FOLDER = "to-be-scored/"
+S3_ASKED_FOR_QUOTE_FOLDER = 'asked-for-quote/'
+S3_SERIES_FILE = 'current-rate-data/series.json'
 
 s3_client = boto3.client("s3", region_name="us-west-2")
+s3_resource = boto3.resource("s3", region_name="us-west-2")
 sns_client = boto3.client("sns", region_name="us-west-2")
-
 s3_cache = {}
 
 # retrieves an object from S3, optionally reading from cache
@@ -34,6 +43,22 @@ def s3_get(key, cache=False):
 def s3_put(key, body):
     s3_client.put_object(Bucket=DATA_BUCKET, Body=body, Key=key)
 
+def s3_move(key: str, new_key: str):
+    copy_source = {'Bucket': DATA_BUCKET, 'Key': key}
+    s3_client.copy_object(Bucket=DATA_BUCKET, CopySource=copy_source, Key=new_key)
+    s3_client.delete_object(Bucket=DATA_BUCKET, Key=key)
+
+
+def s3_get_files(folder):
+    files = []
+    res = s3_client.list_objects_v2(Bucket=DATA_BUCKET, Prefix=folder)
+    contents = res.get("Contents")
+    for content in contents:
+        if content['Key'][-1] == "/":
+            continue
+        files.append(content['Key'])
+    return files
+    
 def sns_publish(message):
     sns_client.publish(
         TopicArn=DEAD_LETTER_TOPIC,
@@ -43,6 +68,9 @@ def sns_publish(message):
 def read_json_file(filename):
     with open(filename) as f:
         return json.loads(f.read())
+
+def get_file_name(file):
+    return os.path.splitext(os.path.basename(file))[0]
 
 def to_32byte_hex(val):
     return Web3.toHex(Web3.toBytes(val).rjust(32, b'\0'))
@@ -55,6 +83,21 @@ def stringify_error(e):
         traceback = traceback.tb_next
     return s
 
+def get_week_of_month(year, month, day):
+    return next(
+        (
+            week_number
+            for week_number, days_of_week in enumerate(monthcalendar(year, month), start=1)
+            if day in days_of_week
+        ),
+        None,
+    )
+
+def get_date_string():
+  return datetime.now().strftime("%Y-%m-%d")
+
+def get_timestamp():
+    return datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
 
 def handle_error(event, e, statusCode):
     print(e)
@@ -115,6 +158,45 @@ def get_network(chainId: str) -> str:
     if chainId in NETWORKS:
         return NETWORKS[chainId]
     return None
+
+def get_billings(chain_id: str) -> dict:
+    try:
+        billings = json.loads(s3_get(S3_BILLINGS_FOLDER + chain_id + "/" + S3_BILLINGS_FILE))
+        return billings
+    except Exception as e:
+        print(e)
+        return {chain_id: {}}
+
+def get_billing_errors(chain_id: str) -> dict:
+    try:
+        billing_errors = json.loads(s3_get(S3_BILLINGS_FOLDER + chain_id + "/" + S3_BILLING_ERRORS_FILE))
+        return billing_errors
+    except Exception as e:
+        print(e)
+        return {chain_id: {}}
+
+def get_soteria_score_files(chain_id: str) -> List:
+    try:
+        return s3_get_files(S3_SOTERIA_SCORES_FOLDER + chain_id)
+    except Exception as e:
+        print(e)
+        return []
+
+def save_billings(chainId: str, billings: dict) -> bool:
+    try:
+        s3_put(S3_BILLINGS_FOLDER + chainId + "/" + S3_BILLINGS_FILE, json.dumps(billings))
+        return True
+    except Exception as e:
+        print(e)
+        return False
+
+def save_billing_errors(chainId: str, billing_errors: dict) -> bool:
+    try:
+        s3_put(S3_BILLINGS_FOLDER + chainId + "/" + S3_BILLING_ERRORS_FILE, json.dumps(billing_errors))
+        return True
+    except Exception as e:
+        print(e)
+        return False
 
 def get_soteria_policy_holders(chainId: str) -> list:
     cfg = get_config(chainId)
