@@ -54,8 +54,6 @@ def s3_get_files(folder):
     res = s3_client.list_objects_v2(Bucket=DATA_BUCKET, Prefix=folder)
     contents = res.get("Contents")
     for content in contents:
-        if content['Key'][-1] == "/":
-            continue
         files.append(content['Key'])
     return files
     
@@ -174,10 +172,12 @@ def get_billing_errors(chain_id: str) -> dict:
     except Exception as e:
         print(e)
         return {chain_id: {}}
-
+      
 def get_soteria_score_files(chain_id: str) -> List:
     try:
-        return s3_get_files(S3_SOTERIA_SCORES_FOLDER + chain_id)
+        score_files = s3_get_files(S3_SOTERIA_SCORES_FOLDER + chain_id)
+        score_files = list(filter(lambda score_file: score_file[-1] != '/' or 'archived' not in score_file ))
+        return score_files
     except Exception as e:
         print(e)
         return []

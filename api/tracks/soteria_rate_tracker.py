@@ -9,10 +9,15 @@ async def get_positions(address: str, chainId: str):
     return json.loads(get_balances({"account": address, "chainId": chainId}))
 
 
-async def get_score(policyholder: dict(), chainId: str) -> bool:
+async def get_score(policyholder: dict, chainId: str) -> bool:
     try:
         positions = await get_positions(policyholder["address"], chainId)
-        score = json.loads(get_scores(policyholder["address"], positions))
+        score = get_scores(policyholder["address"], positions)
+      
+        if score is None:
+            raise Exception()
+        score = json.loads(score)
+        
         await store_rate(policyholder["address"], chainId, policyholder["coverLimit"], score)
         return policyholder["address"], True
     except Exception as e:

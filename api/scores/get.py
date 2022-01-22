@@ -41,8 +41,9 @@ def get_scores(account, positions):
         for i in unknown_protocols:
             output_unknown_protocols.append(i)
 
-        date_string = get_date_string()
-        s3_put(S3_TO_BE_SCORED_FOLDER + date_string + "/" + account + ".json", json.dumps(output_unknown_protocols))
+        if len(output_unknown_protocols) > 0:
+            date_string = get_date_string()
+            s3_put(S3_TO_BE_SCORED_FOLDER + date_string + "/" + account + ".json", json.dumps({'unknown_protocols': output_unknown_protocols}))
 
         # sets unknown protocol to highest risk tier
         scored_portfolio['tier'] = scored_portfolio['tier'].replace(np.nan, 0)  
@@ -92,18 +93,18 @@ def get_scores(account, positions):
 
     def create_protocol_correlation(portfolio_map, correl_value):
         matrix_array = []
-        risk_load_category = []
+        risk_load_categories = []
         countCategory = portfolio_map['category'].value_counts()
         index = 0
-        for k,v in countCategory.items():
+        for k, v in countCategory.items():
             index = get_index(k, correl_value)
             matrix_cat = create_matrix(correl_value, v, index, 'correlation')
             matrix_array.append(matrix_cat)
             risk_load_array = risk_load_category(portfolio_map, k)
             risk_load_array2 = np.array(risk_load_array)
             score = calc_portfolio_score(matrix_cat, risk_load_array2)
-            risk_load_category.append(score)
-        return  risk_load_category
+            risk_load_categories.append(score)
+        return  risk_load_categories
 
     def category_matrix(categories, correl_cat):
         indexes = []
@@ -128,74 +129,89 @@ def get_scores(account, positions):
         return portfolio_rate_score
 
     def rate_engine(account, positions):
-        # log the positions by account
-        date_string = get_date_string()
-        s3_put(S3_ASKED_FOR_QUOTE_FOLDER + date_string + "/"+ account + ".json", json.dumps(positions))
+        try:
+            # log the positions by account
+            date_string = get_date_string()
+            s3_put(S3_ASKED_FOR_QUOTE_FOLDER + date_string + "/" + account + ".json", json.dumps(positions))
 
-        # get the published rate data and create dataframes
-        series_json_object = json.loads(s3_get(S3_SERIES_FILE, cache=True))
-        rate_table = pd.DataFrame(series_json_object['data']['rateCard'])
-        correl_cat = pd.DataFrame(series_json_object['data']['correlCat'])
-        protocol_map = pd.DataFrame(series_json_object['data']['protocolMap'])
-        correl_value = pd.DataFrame(series_json_object['data']['corrValue'])
+            # get the published rate data and create dataframes
+            series_json_object = json.loads(s3_get(S3_SERIES_FILE, cache=True))
+            rate_table = pd.DataFrame(series_json_object['data']['rateCard'])
+            correl_cat = pd.DataFrame(series_json_object['data']['correlCat'])
+            protocol_map = pd.DataFrame(series_json_object['data']['protocolMap'])
+            correl_value = pd.DataFrame(series_json_object['data']['corrValue'])
 
-        # init a dataframe to store an account's positions
-        portfolio = pd.DataFrame(positions)
-        portfolio.columns = ['network', 'appId','balanceUSD', 'balanceETH']
+            # init a dataframe to store an account's positions
+            portfolio = pd.DataFrame(positions)
+            portfolio.columns = ['network', 'appId','balanceUSD', 'balanceETH']
 
-        # portfolio of protocols
-        balance_by_tier = get_protocol(portfolio, protocol_map, rate_table)
-        balance_by_tier['category'] = balance_by_tier['category'].replace(np.nan, 'unrated')
-        
-        risk_load_category = create_protocol_correlation(balance_by_tier, correl_value)
-        total_score = calc_rate_online(balance_by_tier, risk_load_category, correl_cat)
+            # portfolio of protocols
+            balance_by_tier = get_protocol(portfolio, protocol_map, rate_table)
+            balance_by_tier['category'] = balance_by_tier['category'].replace(np.nan, 'unrated')
+            
+            risk_load_category = create_protocol_correlation(balance_by_tier, correl_value)
+            total_score = calc_rate_online(balance_by_tier, risk_load_category, correl_cat)
 
-        # Variables for the table:
-        balance_total = balance_by_tier['balanceUSD'].sum()
-        rp_total = balance_by_tier['rp-usd'].sum()
-        total_rate = rp_total+total_score
-        rate_percentage = total_rate/balance_total
+            # Variables for the table:
+            balance_total = balance_by_tier['balanceUSD'].sum()
+            rp_total = balance_by_tier['rp-usd'].sum()
+            total_rate = rp_total+total_score
+            rate_percentage = total_rate/balance_total
 
-        # TODO: remove when input format is locked. 
-        # Clean up column name for return data DIRTFT FTW
-        balance_by_tier.rename(columns={'protocol': 'appId'}, inplace=True)
+            # TODO: remove when input format is locked. 
+            # Clean up column name for return data DIRTFT FTW
+            balance_by_tier.rename(columns={'protocol': 'appId'}, inplace=True)
 
-        ############### Added for debugging ###############
-        categories_in_portfolio2 = balance_by_tier['category'].unique()
-        categories_in_portfolio3 = balance_by_tier.groupby('category')['risk-adj'].sum()
-        df4 = pd.DataFrame(categories_in_portfolio3)
-        df4['TotalScore'] = total_score
+            ############### Added for debugging ###############
+            categories_in_portfolio2 = balance_by_tier['category'].unique()
+            categories_in_portfolio3 = balance_by_tier.groupby('category')['risk-adj'].sum()
+            df4 = pd.DataFrame(categories_in_portfolio3)
+            df4['TotalScore'] = total_score
 
-        for _ in categories_in_portfolio2:
-            staked_cover = rp_total + sum(categories_in_portfolio3)
+            for _ in categories_in_portfolio2:
+                staked_cover = rp_total + sum(categories_in_portfolio3)
 
-        stacked_cover_rate = staked_cover / balance_total
-        discount = (rate_percentage / stacked_cover_rate) - 1
+            stacked_cover_rate = staked_cover / balance_total
+            discount = (rate_percentage / stacked_cover_rate) - 1
 
-        # table data
-        data2 = {'Type': ['Address Cover', 'Stacked Cover', 'Discount'], 'RP':[total_rate, staked_cover, discount], 'ROL':[rate_percentage, stacked_cover_rate,'']}  
-        df3 = pd.DataFrame(data2) 
-        df3.head()
-        
-        # table data
-        balance_by_tier['json'] = balance_by_tier.to_json(orient='records', lines=True).splitlines()
-        rate_out = { 
-            'address': account, 
-            'address_rp': total_rate,
-            'current_rate': rate_percentage,
-            'timestamp': get_timestamp(),
-            'protocols': list(map(json.loads, balance_by_tier['json'].tolist())),
-            'metadata': series_json_object['metadata']
-        }
-        return rate_out
+            # table data
+            data2 = {'Type': ['Address Cover', 'Stacked Cover', 'Discount'], 'RP':[total_rate, staked_cover, discount], 'ROL':[rate_percentage, stacked_cover_rate,'']}  
+            df3 = pd.DataFrame(data2) 
+            df3.head()
+            
+            # table data
+            balance_by_tier['json'] = balance_by_tier.to_json(orient='records', lines=True).splitlines()
+            rate_out = { 
+                'address': account, 
+                'address_rp': total_rate,
+                'current_rate': rate_percentage,
+                'timestamp': get_timestamp(),
+                'protocols': list(map(json.loads, balance_by_tier['json'].tolist())),
+                'metadata': series_json_object['metadata']
+            }
+            return rate_out
+        except Exception as e:
+            print(e)
+            return None
 
     rate_card = rate_engine(account, positions)
+    if rate_card is None:
+        print(f"Unexpected error occurred while calculating rate for {account}. Please refer logs to investigate")
+        return None
     return json.dumps(rate_card, indent=2)
 
 def handler(event, context):
     try:
         account, positions = verify_positions(event["body"])
         response_body = get_scores(account, positions)
+
+        if response_body is None:
+            return {
+                "statusCode": 400,
+                "body": {"message": "Error"},
+                "headers": headers
+            }
+            
         return {
             "statusCode": 200,
             "body": response_body,
