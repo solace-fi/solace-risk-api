@@ -162,7 +162,7 @@ def get_billings(chain_id: str) -> dict:
         billings = json.loads(s3_get(S3_BILLINGS_FOLDER + chain_id + "/" + S3_BILLINGS_FILE))
         return billings
     except Exception as e:
-        print(e)
+        handle_error(e)
         return {chain_id: {}}
 
 def get_billing_errors(chain_id: str) -> dict:
@@ -170,7 +170,7 @@ def get_billing_errors(chain_id: str) -> dict:
         billing_errors = json.loads(s3_get(S3_BILLINGS_FOLDER + chain_id + "/" + S3_BILLING_ERRORS_FILE))
         return billing_errors
     except Exception as e:
-        print(e)
+        handle_error(e)
         return {chain_id: {}}
       
 def get_soteria_score_files(chain_id: str) -> List:
@@ -179,7 +179,15 @@ def get_soteria_score_files(chain_id: str) -> List:
         score_files = list(filter(lambda score_file: score_file[-1] != '/' or 'archived' not in score_file ))
         return score_files
     except Exception as e:
-        print(e)
+        handle_error(e)
+        return []
+
+def get_soteria_score_file(chain_id: str, account: str):
+    try:
+        score_file = s3_get(S3_SOTERIA_SCORES_FOLDER + chain_id + "/" + account + ".json", cache=True)
+        return score_file
+    except Exception as e:
+        handle_error(e)
         return []
 
 def save_billings(chainId: str, billings: dict) -> bool:
@@ -187,7 +195,7 @@ def save_billings(chainId: str, billings: dict) -> bool:
         s3_put(S3_BILLINGS_FOLDER + chainId + "/" + S3_BILLINGS_FILE, json.dumps(billings))
         return True
     except Exception as e:
-        print(e)
+        handle_error(e)
         return False
 
 def save_billing_errors(chainId: str, billing_errors: dict) -> bool:
@@ -195,8 +203,21 @@ def save_billing_errors(chainId: str, billing_errors: dict) -> bool:
         s3_put(S3_BILLINGS_FOLDER + chainId + "/" + S3_BILLING_ERRORS_FILE, json.dumps(billing_errors))
         return True
     except Exception as e:
-        print(e)
+        handle_error(e)
         return False
+
+def get_price_in_eth(amount_in_usd: float):
+    # convert to usdc
+    amount = amount_in_usd // (10**6) 
+    # call oracle
+    url = f"https://api.1inch.exchange/v3.0/1/quote?fromTokenAddress=0x52EA46506B9CC5Ef470C5bf89f17Dc28bB35D85C&toTokenAddress=0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE&amount={amount}"
+    r = requests.get(url)
+    rjson = r.json()
+
+    if r.status_code != 200 or 'toTokenAmount' not in rjson:
+        sns_publish(f"Error in get_price_in_eth():\nRequest for {url}\nReturned HTTP {r.status_code}\n{r.content.decode('utf-8')}")
+        return 0
+    return int(rjson['toTokenAmount']) 
 
 def get_soteria_policy_holders(chainId: str) -> list:
     cfg = get_config(chainId)
