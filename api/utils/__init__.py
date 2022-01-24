@@ -53,8 +53,9 @@ def s3_get_files(folder):
     files = []
     res = s3_client.list_objects_v2(Bucket=DATA_BUCKET, Prefix=folder)
     contents = res.get("Contents")
-    for content in contents:
-        files.append(content['Key'])
+    if contents:
+        for content in contents:
+            files.append(content['Key'])
     return files
     
 def sns_publish(message):
@@ -162,7 +163,7 @@ def get_billings(chain_id: str) -> dict:
         billings = json.loads(s3_get(S3_BILLINGS_FOLDER + chain_id + "/" + S3_BILLINGS_FILE))
         return billings
     except Exception as e:
-        handle_error(e)
+        print(e)
         return {chain_id: {}}
 
 def get_billing_errors(chain_id: str) -> dict:
@@ -170,16 +171,17 @@ def get_billing_errors(chain_id: str) -> dict:
         billing_errors = json.loads(s3_get(S3_BILLINGS_FOLDER + chain_id + "/" + S3_BILLING_ERRORS_FILE))
         return billing_errors
     except Exception as e:
-        handle_error(e)
+        print(e)
         return {chain_id: {}}
       
 def get_soteria_score_files(chain_id: str) -> List:
     try:
         score_files = s3_get_files(S3_SOTERIA_SCORES_FOLDER + chain_id)
-        score_files = list(filter(lambda score_file: score_file[-1] != '/' or 'archived' not in score_file ))
+        if score_files:
+            score_files = list(filter(lambda score_file: score_file[-1] != '/' or 'archived' not in score_file , score_files))
         return score_files
     except Exception as e:
-        handle_error(e)
+        print(e)
         return []
 
 def get_soteria_score_file(chain_id: str, account: str):
@@ -187,15 +189,15 @@ def get_soteria_score_file(chain_id: str, account: str):
         score_file = s3_get(S3_SOTERIA_SCORES_FOLDER + chain_id + "/" + account + ".json", cache=True)
         return score_file
     except Exception as e:
-        handle_error(e)
-        return []
+        print(e)
+        return None
 
 def save_billings(chainId: str, billings: dict) -> bool:
     try:
         s3_put(S3_BILLINGS_FOLDER + chainId + "/" + S3_BILLINGS_FILE, json.dumps(billings))
         return True
     except Exception as e:
-        handle_error(e)
+        handle_error({"resource": "utils.save_billings()"}, e, 500)
         return False
 
 def save_billing_errors(chainId: str, billing_errors: dict) -> bool:
@@ -203,7 +205,7 @@ def save_billing_errors(chainId: str, billing_errors: dict) -> bool:
         s3_put(S3_BILLINGS_FOLDER + chainId + "/" + S3_BILLING_ERRORS_FILE, json.dumps(billing_errors))
         return True
     except Exception as e:
-        handle_error(e)
+        handle_error({"resource": "utils.save_billing_errors()"}, e, 500)
         return False
 
 def get_price_in_eth(amount_in_usd: float):

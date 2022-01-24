@@ -8,7 +8,7 @@ def get_scores_by_account(chain_id: str, account: str):
             return scores
         return []
     except Exception as e:
-        handle_error(e)
+        handle_error({"resource": "tracks.get_scores_by_account()"}, e, 500)
         return None
 
 def handler(event, context):

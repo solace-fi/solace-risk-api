@@ -142,7 +142,7 @@ def post_premium_charged(chain_id: str, account: str, timestamp: str):
         save_billings(chain_id, billings)
         return True
     except Exception as e:
-        handle_error(e)
+        handle_error({"resource": "billing.handler.post_premium_charged()"}, e, 500)
         return False
 
 def get_all_billings(chain_id: str):
@@ -155,7 +155,7 @@ def get_all_billings(chain_id: str):
                 result.append(account_billing)
         return result
     except Exception as e:
-        handle_error(e)
+        handle_error({"resource": "billing.handler.get_all_billings()"}, e, 500)
         return None
 
 def get_billings_by_account(chain_id: str, account: str):
@@ -163,7 +163,7 @@ def get_billings_by_account(chain_id: str, account: str):
         billings = __get_billings_by_account(chain_id, account)
         return billings
     except Exception as e:
-        handle_error(e)
+        handle_error({"resource": "billing.handler.get_billings_by_account()"}, e, 500)
         return None
 
 def get_unpaid_billings_for_account(chain_id: str, account: str):
@@ -172,7 +172,7 @@ def get_unpaid_billings_for_account(chain_id: str, account: str):
         billings = list(filter(lambda billing: billing["charged"] == False, billings))
         return billings
     except Exception as e:
-        handle_error(e)
+        handle_error({"resource": "billing.handler.get_unpaid_billings_for_account()"}, e, 500)
         return None
 
 def get_paid_billings_for_account(chain_id: str, account: str):
@@ -181,7 +181,7 @@ def get_paid_billings_for_account(chain_id: str, account: str):
         billings = list(filter(lambda billing: billing["charged"] == True, billings))
         return billings
     except Exception as e:
-        handle_error(e)
+        handle_error({"resource": "billing.handler.get_paid_billings_for_account()"}, e, 500)
         return None
 
 def get_premium_for_account(chain_id: str, account: str):
@@ -196,7 +196,7 @@ def get_premium_for_account(chain_id: str, account: str):
         result["premium_in_eth"] = premium_in_eth
         return result
     except Exception as e:
-        handle_error(e)
+        handle_error({"resource": "billing.handler.get_premium_for_account()"}, e, 500)
         return None
 
 # ----------------------------------------------------

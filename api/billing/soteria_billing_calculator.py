@@ -51,9 +51,9 @@ async def calculate_bill(score_file: str, policyholder: str):
         flat_df1 = flatten_nested_json_df(df)
         flat_df1['timeStamp'] = pd.to_datetime(flat_df1['scores.timestamp'])
 
-        g1 = pd.DataFrame({'count': flat_df1.groupby(['timeStamp', 'scores.score.protocols.balanceUSD', 'scores.coverlimit', 'scores.score.currentRate']).size()}).reset_index()
+        g1 = pd.DataFrame({'count': flat_df1.groupby(['timeStamp', 'scores.score.protocols.balanceUSD', 'scores.coverlimit', 'scores.score.current_rate']).size()}).reset_index()
         sub1 = pd.DataFrame(g1.groupby('timeStamp')[['scores.score.protocols.balanceUSD']].sum())
-        sub2 = pd.DataFrame(g1.groupby('timeStamp')[['scores.coverlimit','scores.score.currentRate']].max())
+        sub2 = pd.DataFrame(g1.groupby('timeStamp')[['scores.coverlimit','scores.score.current_rate']].max())
         sub2['portfolioBalanceUSD'] = sub1
 
         # Make sure the timestamp is sorted old to new
@@ -69,8 +69,8 @@ async def calculate_bill(score_file: str, policyholder: str):
         sub2['yearsExposed']= sub2['secondsExposed'] / 3.154e+7  #seconds in a year
 
         # Calculate the premium utilized during the exposure period
-        sub2['trueUpPremium'] = sub2['yearsExposed'] * sub2['scores.score.currentRate'] * sub2['amountCovered']
-        sub2.rename(columns={'scores.coverlimit': 'coverLimit', 'scores.score.currentRate': 'currentRate'}, inplace=True)
+        sub2['trueUpPremium'] = sub2['yearsExposed'] * sub2['scores.score.current_rate'] * sub2['amountCovered']
+        sub2.rename(columns={'scores.coverlimit': 'coverLimit', 'scores.score.current_rate': 'currentRate'}, inplace=True)
         sub2 = sub2[['timeStamp', 'coverLimit', 'portfolioBalanceUSD', 'amountCovered', 'currentRate', 'timeExposed', 'secondsExposed', 'yearsExposed','trueUpPremium']]
 
         # Calculate the grand total trueUpPremium to be billed oncahin
@@ -78,7 +78,6 @@ async def calculate_bill(score_file: str, policyholder: str):
         timestamp = sub2['timeStamp'].iloc[-1]
         return {"timestamp": str(timestamp), "premium": total_due, "charged": False, "charged_time": ""}, policyholder, score_file
     except Exception as e:
-        print(e)
         return None, policyholder, score_file
 
 
