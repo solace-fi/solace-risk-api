@@ -106,37 +106,33 @@ async def calculate_bills():
                 policyholder = get_file_name(score_file)
                 tasks.append(asyncio.create_task(calculate_bill(score_file, policyholder)))
 
-            try:
-                completed_tasks, _ = await asyncio.wait(tasks)
-                for completed_task in completed_tasks:
-                    result = completed_task.result()
-                    premium = result[0]
-                    policyholder = result[1]
-                    score_file = result[2]
+            completed_tasks, _ = await asyncio.wait(tasks)
+            for completed_task in completed_tasks:
+                result = completed_task.result()
+                premium = result[0]
+                policyholder = result[1]
+                score_file = result[2]
 
-                    if premium is None:
-                        print(f"Error occurred while calculating the premium for policyholder: {policyholder}")
-                        if policyholder not in billing_errors:
-                            billing_errors[policyholder] = []
-                        billing_errors[policyholder].append({'score_file': score_file, 'timestamp': get_timestamp()})
-                        continue
+                if premium is None:
+                    print(f"Error occurred while calculating the premium for policyholder: {policyholder}")
+                    if policyholder not in billing_errors:
+                        billing_errors[policyholder] = []
+                    billing_errors[policyholder].append({'score_file': score_file, 'timestamp': get_timestamp()})
+                    continue
 
-                    if policyholder not in billings:
-                        billings[policyholder] = []
-                
-                    already_calculated = list(filter(lambda p: p['timestamp'] == premium['timestamp'], billings[policyholder]))
-                    if len(already_calculated) > 0:
-                        print(f"Premium has been already calculated for policyholder {policyholder}. Premium info: {premium}")
-                        continue
+                if policyholder not in billings:
+                    billings[policyholder] = []
+            
+                already_calculated = list(filter(lambda p: p['timestamp'] == premium['timestamp'], billings[policyholder]))
+                if len(already_calculated) > 0:
+                    print(f"Premium has been already calculated for policyholder {policyholder}. Premium info: {premium}")
+                    continue
 
-                    billings[policyholder].append(premium)
-                    print(f"Premium has been calculated for policyholder: {policyholder}. Premium info: {premium}")
+                billings[policyholder].append(premium)
+                print(f"Premium has been calculated for policyholder: {policyholder}. Premium info: {premium}")
 
-                    # archive score file
-                    await archive_score_file(score_file, chain_id)
-
-            except Exception as e:
-                raise(e)
+                # archive score file
+                await archive_score_file(score_file, chain_id)
             
             # save results
             save_billings(chainId=chain_id, billings=billings)

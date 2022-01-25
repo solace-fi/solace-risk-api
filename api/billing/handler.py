@@ -5,38 +5,38 @@ from api.billing.helpers import *
 #    REST API HANDLERS
 #-----------------------------------------------------
 
-def post_premium_charged_handler(event, context):
-    try:
-        params = event["body"]
-        verify_chain_id(params=params)
-        verify_account(params=params)
-        verify_charged_amount(params=params)
-        chain_id = params["chain_id"]
-        account = params["account"]
-        charged_amount = params["charged_amount"]
+# def post_premium_charged_handler(event, context):
+#     try:
+#         params = event["body"]
+#         verify_chain_id(params=params)
+#         verify_account(params=params)
+#         verify_charged_amount(params=params)
+#         chain_id = params["chain_id"]
+#         account = params["account"]
+#         charged_amount = params["charged_amount"]
 
-        unpaid_premium_amount = get_premium_for_account(chain_id, account)
-        premium = unpaid_premium_amount["premium"]
-        if premium != 0 and (premium > charged_amount):
-            return json.dumps({
-                "status_code": 500,
-                "result": {"message": f"Unpaid premium amount is bigger than charged premium amount. Unpaid Premium: {premium} Charged Premium: {charged_amount}"}
-            })
+#         unpaid_premium_amount = get_premium_for_account(chain_id, account)
+#         premium = unpaid_premium_amount["premium"]
+#         if premium != 0 and (premium > charged_amount):
+#             return json.dumps({
+#                 "status_code": 500,
+#                 "result": {"message": f"Unpaid premium amount is bigger than charged premium amount. Unpaid Premium: {premium} Charged Premium: {charged_amount}"}
+#             })
 
-        timestamp = get_timestamp()
-        if "timestamp" in params:
-            timestamp = params["timestamp"]
+#         timestamp = get_timestamp()
+#         if "timestamp" in params:
+#             timestamp = params["timestamp"]
 
-        status = post_premium_charged(chain_id=chain_id, account=account, timestamp=timestamp)
-        if status:
-            return response({'chain_id': chain_id, 'account': account, 'premium_charged': status})
-        else:
-            return error_response()
+#         status = post_premium_charged(chain_id=chain_id, account=account, timestamp=timestamp)
+#         if status:
+#             return response({'chain_id': chain_id, 'account': account, 'premium_charged': status})
+#         else:
+#             return error_response()
 
-    except InputException as e:
-        return handle_error(event, e, 400)
-    except Exception as e:
-        return handle_error(event, e, 500)
+#     except InputException as e:
+#         return handle_error(event, e, 400)
+#     except Exception as e:
+#         return handle_error(event, e, 500)
 
 def get_premium_amount_handler(event, context):
     try:

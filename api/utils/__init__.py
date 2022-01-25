@@ -140,9 +140,9 @@ config_s3 = json.loads(s3_get('config.json', cache=True))
 def get_supported_chains():
     return config_s3['supported_chains']
 
-def get_config(chainId: str):
-    if chainId in get_supported_chains():
-        cfg = config_s3[chainId]
+def get_config(chain_id: str):
+    if chain_id in get_supported_chains():
+        cfg = config_s3[chain_id]
         w3 = Web3(Web3.HTTPProvider(cfg["alchemyUrl"].format(alchemy_key)))
         cfg["w3"] = w3
 
@@ -153,6 +153,10 @@ def get_config(chainId: str):
         return cfg
     else:
         return None
+
+def get_premium_collector_signer(chain_id: str):
+    # TODO: return premium collector signer
+    return ''
 
 def get_network(chainId: str) -> str:
     if chainId in NETWORKS:
@@ -210,10 +214,9 @@ def save_billing_errors(chainId: str, billing_errors: dict) -> bool:
         return False
 
 def get_price_in_eth(amount_in_usd: float):
-    # convert to usdc
-    amount = amount_in_usd // (10**6) 
+    amount_in_usdc = int(amount_in_usd * 10**6)
     # call oracle
-    url = f"https://api.1inch.exchange/v3.0/1/quote?fromTokenAddress=0x52EA46506B9CC5Ef470C5bf89f17Dc28bB35D85C&toTokenAddress=0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE&amount={amount}"
+    url = f"https://api.1inch.exchange/v3.0/1/quote?fromTokenAddress=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48&toTokenAddress=0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE&amount={amount_in_usdc}"
     r = requests.get(url)
     rjson = r.json()
 
