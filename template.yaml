@@ -100,6 +100,146 @@ Resources:
             Path: /scores
             Method: post
             RestApiId: !Ref RestApi
+  SoteriaScoreTrackerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataTrackScoresFunction
+      Handler: api/tracks/soteria_rate_tracker.main
+      Runtime: python3.8
+      MemorySize: 1024
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(60 minutes)
+  GetSoteriaScoreTracksFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataGetSoteriaScoreTracksFunction
+      Handler: api/tracks/get.handler
+      Runtime: python3.8
+      MemorySize: 128
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /soteria/tracks
+            Method: get
+            RestApiId: !Ref RestApi
+  SoteriaBillingFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataSoteriaBillingFunction
+      Handler: api/billing/soteria_billing_calculator.main
+      Runtime: python3.8
+      MemorySize: 1024
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: cron(0 0 17 ? * FRI *)
+  GetSoteriaBillingsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataGetSoteriaBillingsFunction
+      Handler: api/billing/handler.get_all_billings_handler
+      Runtime: python3.8
+      MemorySize: 128
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /soteria/billings/all
+            Method: get
+            RestApiId: !Ref RestApi
+  GetSoteriaBillingsByAccountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataGetSoteriaBillingsByAccountFunction
+      Handler: api/billing/handler.get_billings_by_account_handler
+      Runtime: python3.8
+      MemorySize: 128
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /soteria/billings
+            Method: get
+            RestApiId: !Ref RestApi
+  GetSoteriaUnpaidBillingsByAccountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataGetSoteriaUnpaidBillingsByAccountFunction
+      Handler: api/billing/handler.get_unpaid_billings_by_account_handler
+      Runtime: python3.8
+      MemorySize: 128
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /soteria/billings/unpaid
+            Method: get
+            RestApiId: !Ref RestApi
+  GetSoteriaPaidBillingsByAccountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataGetSoteriaPaidBillingsByAccountFunction
+      Handler: api/billing/handler.get_paid_billings_by_account_handler
+      Runtime: python3.8
+      MemorySize: 128
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /soteria/billings/paid
+            Method: get
+            RestApiId: !Ref RestApi
+  GetSoteriaPremiumByAccountFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataGetSoteriaPremiumByAccountFunction
+      Handler: api/billing/handler.get_premium_amount_handler
+      Runtime: python3.8
+      MemorySize: 128
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /soteria/premium
+            Method: get
+            RestApiId: !Ref RestApi
+  PostSoteriaPremiumChargedFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataPostSoteriaPremiumChargedFunction
+      Handler: api/billing/handler.post_premium_charged_handler
+      Runtime: python3.8
+      MemorySize: 128
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /soteria/premium
+            Method: post
+            RestApiId: !Ref RestApi
   # Data Bucket
   DataBucket:
     Type: AWS::S3::Bucket
