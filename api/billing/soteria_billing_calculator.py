@@ -47,6 +47,7 @@ async def calculate_bill(score_file: str, policyholder: str):
     try:
         print(f"Calculating premium for policyholder: {policyholder}. Score file: {score_file}")
         scores = json.loads(s3_get(score_file))
+
         df = pd.DataFrame.from_dict(scores)
         flat_df1 = flatten_nested_json_df(df)
         flat_df1['timeStamp'] = pd.to_datetime(flat_df1['scores.timestamp'])
@@ -57,9 +58,9 @@ async def calculate_bill(score_file: str, policyholder: str):
         sub2['portfolioBalanceUSD'] = sub1
 
         # Make sure the timestamp is sorted old to new
-        sub2.sort_values(by='timeStamp', ascending=True, kind='quicksort', inplace = True)
+        sub2.sort_values(by='timeStamp', ascending=True, kind='quicksort', inplace=True)
         # Which amount to bill? Coverlimit or Portfolio Balance? Always whats best for policy holder
-        sub2['amountCovered'] = np.where(sub2['scores.coverlimit']<=sub2['portfolioBalanceUSD'], sub2['scores.coverlimit'], sub2['portfolioBalanceUSD'])
+        sub2['amountCovered'] = np.where(sub2['scores.coverlimit'] <= sub2['portfolioBalanceUSD'], sub2['scores.coverlimit'], sub2['portfolioBalanceUSD'])
 
         # Calculate the amount of exposure time
         sub2 = sub2.reset_index()
@@ -84,7 +85,7 @@ async def calculate_bill(score_file: str, policyholder: str):
 async def archive_score_file(score_file: str, chain_id: str):
     date_folder = get_date_string()
     filename = get_file_name(score_file)
-    new_key = S3_SOTERIA_SCORES_FOLDER + chain_id + "/archived/" + date_folder + "/" + filename + ".json"
+    new_key = S3_SOTERIA_PROCESSED_SCORES_FOLDER + chain_id + date_folder + "/" + filename + ".json"
     s3_move(score_file, new_key)
 
 
@@ -92,7 +93,7 @@ async def calculate_bills():
     for chain_id in get_supported_chains():
         print(f"Calculating soteria billings for chain {chain_id} has been started....")
         try:
-            billings = get_billings(chain_id=chain_id)
+            billings = get_soteria_billings(chain_id=chain_id)
             billing_errors = get_billing_errors(chain_id=chain_id)
             score_files = get_soteria_score_files(chain_id=chain_id)
           
@@ -115,20 +116,20 @@ async def calculate_bills():
 
                     if premium is None:
                         print(f"Error occurred while calculating the premium for policyholder: {policyholder}")
-                        if policyholder not in billing_errors[chain_id]:
-                            billing_errors[chain_id][policyholder] = []
-                        billing_errors[chain_id][policyholder].append({'score_file': score_file, 'timestamp': get_timestamp()})
+                        if policyholder not in billing_errors:
+                            billing_errors[policyholder] = []
+                        billing_errors[policyholder].append({'score_file': score_file, 'timestamp': get_timestamp()})
                         continue
 
-                    if policyholder not in billings[chain_id]:
-                        billings[chain_id][policyholder] = []
+                    if policyholder not in billings:
+                        billings[policyholder] = []
                 
-                    already_calculated = list(filter(lambda p: p['timestamp'] == premium['timestamp'], billings[chain_id][policyholder]))
+                    already_calculated = list(filter(lambda p: p['timestamp'] == premium['timestamp'], billings[policyholder]))
                     if len(already_calculated) > 0:
                         print(f"Premium has been already calculated for policyholder {policyholder}. Premium info: {premium}")
                         continue
 
-                    billings[chain_id][policyholder].append(premium)
+                    billings[policyholder].append(premium)
                     print(f"Premium has been calculated for policyholder: {policyholder}. Premium info: {premium}")
 
                     # archive score file

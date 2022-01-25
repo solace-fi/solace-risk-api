@@ -19,6 +19,7 @@ import asn1tools
 DATA_BUCKET = os.environ.get("DATA_BUCKET", "risk-data.solace.fi.data")
 DEAD_LETTER_TOPIC = os.environ.get("DEAD_LETTER_TOPIC", "arn:aws:sns:us-west-2:151427405638:RiskDataDeadLetterQueue")
 S3_SOTERIA_SCORES_FOLDER = 'soteria-scores/'
+S3_SOTERIA_PROCESSED_SCORES_FOLDER = 'soteria-processed-scores/'
 S3_BILLINGS_FOLDER = 'soteria-billings/'
 S3_BILLINGS_FILE = 'billings.json'
 S3_BILLING_ERRORS_FILE = 'billing_errors.json'
@@ -158,21 +159,21 @@ def get_network(chainId: str) -> str:
         return NETWORKS[chainId]
     return None
 
-def get_billings(chain_id: str) -> dict:
+def get_soteria_billings(chain_id: str) -> dict:
     try:
         billings = json.loads(s3_get(S3_BILLINGS_FOLDER + chain_id + "/" + S3_BILLINGS_FILE))
         return billings
     except Exception as e:
-        print(e)
-        return {chain_id: {}}
+        print(f"No billings file found for chain {chain_id}. Creating new one..")
+        return {}
 
 def get_billing_errors(chain_id: str) -> dict:
     try:
         billing_errors = json.loads(s3_get(S3_BILLINGS_FOLDER + chain_id + "/" + S3_BILLING_ERRORS_FILE))
         return billing_errors
     except Exception as e:
-        print(e)
-        return {chain_id: {}}
+        print(f"No billings error file found for chain {chain_id}. Creating new one..")
+        return {}
       
 def get_soteria_score_files(chain_id: str) -> List:
     try:
