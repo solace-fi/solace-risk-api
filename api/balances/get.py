@@ -115,12 +115,12 @@ def calculate_weights(positions):
 
 def get_balances(params):
     network = None
-    if 'chainId' not in params:
+    if 'chain_id' not in params:
         raise InputException(f"Bad request. Chain id is not provided")
-    network = get_network(params['chainId'])
+    network = get_network(params['chain_id'])
     if network is None:
-        raise InputException(f"Bad request. Network name is not found for chain id: {params['chainId']}")
-    cfg = get_config(params['chainId'])
+        raise InputException(f"Bad request. Network name is not found for chain id: {params['chain_id']}")
+    cfg = get_config(params['chain_id'])
     params2 = verify_params(params, cfg)
     positions = fetch_positions(params2)
     positions2 = parse_positions(positions, network)

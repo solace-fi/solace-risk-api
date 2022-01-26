@@ -141,8 +141,8 @@ async def calculate_bills():
         except Exception as e:
             print(f"Error occurred while calculating bills: Error: {e}")
 
-def main():
+def main(event, context):
     asyncio.run(calculate_bills())
 
 if __name__ == '__main__':
-    main()
+    main(None, None)

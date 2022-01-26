@@ -39,8 +39,8 @@ def collect_premiums():
         except Exception as e:
             print(f"Error occurred while charging premiums for chain {chain_id}. Error: {e}")
 
-def main():
+def main(event, context):
     collect_premiums()
 
 if __name__ == '__main__':
-    main()
+    main(None, None)

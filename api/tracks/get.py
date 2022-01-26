@@ -6,13 +6,14 @@ def get_scores_by_account(chain_id: str, account: str):
         if score_file:
             scores = json.loads(score_file)
             return scores
-        return []
+        return {"scores": []}
     except Exception as e:
         handle_error({"resource": "tracks.get_scores_by_account()"}, e, 500)
         return None
 
 def handler(event, context):
     try:
+        print(type(event))
         params = event["queryStringParameters"]
         __verify_chain_id(params=params)
         __verify_account(params=params)
@@ -20,7 +21,7 @@ def handler(event, context):
         chain_id = params["chain_id"]
         account = params["account"]
         scores = get_scores_by_account(chain_id=chain_id, account=account)
-        if scores:
+        if scores is not None:
             return __response({'chain_id': chain_id, 'account': account, 'scores': scores["scores"]})
         else:
             return __error_response()
@@ -30,16 +31,16 @@ def handler(event, context):
         return handle_error(event, e, 500)
 
 def __error_response():
-    return json.dumps({
-        "status_code": 500,
-        "result": {"message": "Something went wrong"}
-    })
+    return {
+        "statusCode": 500,
+        "body": {"message": "Something went wrong"}
+    }
 
 def __response(result):
-    return json.dumps({
-        "status_code": 200,
-        "result": result
-    })
+    return {
+        "statusCode": 200,
+        "body": json.dumps(result)
+    }
 
 def __verify_chain_id(params):
     if "chain_id" not in params:
