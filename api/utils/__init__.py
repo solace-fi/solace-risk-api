@@ -233,10 +233,10 @@ def get_soteria_policy_holders(chainId: str) -> list:
     # TODO: make contract call
     policyholder1 = {
         "address": "0x09748F07b839EDD1d79A429d3ad918f670D602Cd",
-        "coverLimit": 1000,
+        "coverlimit": 1000,
     }
     policyholder2 = {
         "address": "0x11BB97923209Df97E8c9839E1e394798cb0C0336",
-        "coverLimit": 2000,
+        "coverlimit": 2000,
     }
     return [policyholder1, policyholder2]
