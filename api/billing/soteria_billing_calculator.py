@@ -77,7 +77,7 @@ async def calculate_bill(score_file: str, policyholder: str):
         # Calculate the grand total trueUpPremium to be billed oncahin
         total_due = sub2['trueUpPremium'].sum()
         timestamp = sub2['timeStamp'].iloc[-1]
-        return {"timestamp": str(timestamp), "premium": total_due, "charged": False, "charged_time": ""}, policyholder, score_file
+        return {"timestamp": str(timestamp), "premium": total_due, "created_time": get_timestamp(), "charged": False, "charged_time": ""}, policyholder, score_file
     except Exception as e:
         return None, policyholder, score_file
 
