@@ -143,7 +143,7 @@ Resources:
         ScheduledEvent:
           Type: Schedule
           Properties:
-            Schedule: cron(0 0 17 ? * FRI *)
+            Schedule: cron(00 17 ? * FRI *)
   SoteriaBillingCollectorFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -157,7 +157,7 @@ Resources:
         ScheduledEvent:
           Type: Schedule
           Properties:
-            Schedule: cron(0 0 18 ? * FRI *)
+            Schedule: cron(00 18 ? * FRI *)
   GetSoteriaBillingsFunction:
     Type: AWS::Serverless::Function
     Properties:
