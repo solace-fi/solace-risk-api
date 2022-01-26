@@ -64,8 +64,8 @@ async def track_policy_rates():
         print(f"Soteria rate tracking for chain {chain_id} has been finished")
 
 
-def main():
+def main(event, context):
     asyncio.run(track_policy_rates())
 
 if __name__ == "__main__":
-    main()
+    main(None, None)

@@ -195,7 +195,7 @@ def get_soteria_score_file(chain_id: str, account: str):
         return score_file
     except Exception as e:
         print(e)
-        return None
+        return {}
 
 def save_billings(chainId: str, billings: dict) -> bool:
     try:

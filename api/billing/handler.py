@@ -103,7 +103,7 @@ def get_billings_by_account_handler(event, context):
         chain_id = params["chain_id"]
         account = params["account"]
         billings = get_billings_by_account(chain_id=chain_id, account=account)
-        if billings:
+        if billings is not None:
             return response({'chain_id': chain_id, 'account': account, 'billings': billings})
         else:
             return  error_response()
