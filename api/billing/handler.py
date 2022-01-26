@@ -40,7 +40,7 @@ from api.billing.helpers import *
 
 def get_premium_amount_handler(event, context):
     try:
-        params = event["queryStringParamaters"]
+        params = event["queryStringParameters"]
         verify_chain_id(params=params)
         verify_account(params=params)
 
@@ -59,7 +59,7 @@ def get_premium_amount_handler(event, context):
 
 def get_paid_billings_by_account_handler(event, context):
     try:
-        params = event["queryStringParamaters"]
+        params = event["queryStringParameters"]
         verify_chain_id(params=params)
         verify_account(params=params)
 
@@ -78,7 +78,7 @@ def get_paid_billings_by_account_handler(event, context):
 
 def get_unpaid_billings_by_account_handler(event, context):
     try:
-        params = event["queryStringParamaters"]
+        params = event["queryStringParameters"]
         verify_chain_id(params=params)
         verify_account(params=params)
 
@@ -96,7 +96,7 @@ def get_unpaid_billings_by_account_handler(event, context):
 
 def get_billings_by_account_handler(event, context):
     try:
-        params = event["queryStringParamaters"]
+        params = event["queryStringParameters"]
         verify_chain_id(params=params)
         verify_account(params=params)
 
@@ -114,7 +114,7 @@ def get_billings_by_account_handler(event, context):
 
 def get_all_billings_handler(event, context):
     try:
-        params = event["queryStringParamaters"]
+        params = event["queryStringParameters"]
         verify_chain_id(params=params)
 
         chain_id = params["chain_id"]

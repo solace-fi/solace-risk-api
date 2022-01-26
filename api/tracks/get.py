@@ -13,7 +13,7 @@ def get_scores_by_account(chain_id: str, account: str):
 
 def handler(event, context):
     try:
-        params = event["queryStringParamaters"]
+        params = event["queryStringParameters"]
         __verify_chain_id(params=params)
         __verify_account(params=params)
 
