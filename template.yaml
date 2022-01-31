@@ -238,6 +238,22 @@ Resources:
             Path: /soteria/premium
             Method: get
             RestApiId: !Ref RestApi
+  GetVolatilityFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataGetVolatilityFunction
+      Handler: api/volatility/get.handler
+      Runtime: python3.8
+      MemorySize: 512
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        GetEvent:
+          Type: Api
+          Properties:
+            Path: /volatility
+            Method: post
+            RestApiId: !Ref RestApi
   # Data Bucket
   DataBucket:
     Type: AWS::S3::Bucket
