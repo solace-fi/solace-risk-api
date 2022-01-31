@@ -74,7 +74,7 @@ Resources:
       FunctionName: SolaceRiskDataGetBalancesFunction
       Handler: api/balances/get.handler
       Runtime: python3.8
-      MemorySize: 128
+      MemorySize: 512
       Timeout: 600
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
@@ -90,7 +90,7 @@ Resources:
       FunctionName: SolaceRiskDataGetScoresFunction
       Handler: api/scores/get.handler
       Runtime: python3.8
-      MemorySize: 128
+      MemorySize: 512
       Timeout: 600
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
@@ -120,7 +120,7 @@ Resources:
       FunctionName: SolaceRiskDataGetSoteriaScoreTracksFunction
       Handler: api/tracks/get.handler
       Runtime: python3.8
-      MemorySize: 128
+      MemorySize: 512
       Timeout: 600
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
@@ -164,7 +164,7 @@ Resources:
       FunctionName: SolaceRiskDataGetSoteriaBillingsFunction
       Handler: api/billing/handler.get_all_billings_handler
       Runtime: python3.8
-      MemorySize: 128
+      MemorySize: 512
       Timeout: 600
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
@@ -180,7 +180,7 @@ Resources:
       FunctionName: SolaceRiskDataGetSoteriaBillingsByAccountFunction
       Handler: api/billing/handler.get_billings_by_account_handler
       Runtime: python3.8
-      MemorySize: 128
+      MemorySize: 512
       Timeout: 600
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
@@ -196,7 +196,7 @@ Resources:
       FunctionName: SolaceRiskDataGetSoteriaUnpaidBillingsByAccountFunction
       Handler: api/billing/handler.get_unpaid_billings_by_account_handler
       Runtime: python3.8
-      MemorySize: 128
+      MemorySize: 512
       Timeout: 600
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
@@ -212,7 +212,7 @@ Resources:
       FunctionName: SolaceRiskDataGetSoteriaPaidBillingsByAccountFunction
       Handler: api/billing/handler.get_paid_billings_by_account_handler
       Runtime: python3.8
-      MemorySize: 128
+      MemorySize: 512
       Timeout: 600
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
@@ -228,7 +228,7 @@ Resources:
       FunctionName: SolaceRiskDataGetSoteriaPremiumByAccountFunction
       Handler: api/billing/handler.get_premium_amount_handler
       Runtime: python3.8
-      MemorySize: 128
+      MemorySize: 512
       Timeout: 600
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
