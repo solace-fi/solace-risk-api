@@ -21,7 +21,6 @@ def collect_premiums():
             print(policyholders)
             print(premiums)
 
-            # TODO: Make contract call to charge premiums
             cfg = get_config(chain_id)
             if "soteriaContract" not in cfg:
                 raise Exception(f"Soteria contract could not found for chain {chain_id} ")

@@ -222,7 +222,7 @@ def get_soteria_policy_holders(chainId: str) -> list:
     if cfg is None:
         raise InputException(f"Bad request. Not found config for the chain id: {chainId}")
 
-    block_number = cfg['w3'].eth.blockNumber
+    block_number = cfg['w3'].eth.block_number
     policies = []
     # policy id starts from 1
     policy_count = cfg['soteriaContract'].functions.policyCount().call(block_identifier=block_number)
@@ -231,7 +231,3 @@ def get_soteria_policy_holders(chainId: str) -> list:
         coverlimit = cfg['soteriaContract'].functions.coverLimitOf(policy_id).call(block_identifier=block_number)
         policies.append({"address": policyholder, "coverlimit": coverlimit})
     return policies
-
-
-if __name__ == '__main__':
-    print(get_soteria_policy_holders("1"))
