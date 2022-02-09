@@ -227,7 +227,7 @@ def get_soteria_policy_holders(chainId: str) -> list:
     # policy id starts from 1
     policy_count = cfg['soteriaContract'].functions.policyCount().call(block_identifier=block_number)
     for policy_id in range(1, policy_count+1):
-        policyholder = cfg['soteriaContract'].functions.policyOf(policy_id).call(block_identifier=block_number)
+        policyholder = cfg['soteriaContract'].functions.ownerOf(policy_id).call(block_identifier=block_number)
         coverlimit = cfg['soteriaContract'].functions.coverLimitOf(policy_id).call(block_identifier=block_number)
         policies.append({"address": policyholder, "coverlimit": coverlimit})
     return policies
