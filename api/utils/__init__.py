@@ -147,16 +147,19 @@ def get_config(chain_id: str):
         cfg["w3"] = w3
 
         if len(cfg['soteria']) > 0:
-            soteriaABI = json.loads(s3_get('abi/soteria/SoteriaCoverageProduct.json', cache=True))
-            soteriaContract = w3.eth.contract(address=cfg["soteria"], abi=soteriaABI)
+            soteria_json = json.loads(s3_get('abi/soteria/SolaceCoverProduct.json', cache=True))
+            soteriaContract = w3.eth.contract(address=cfg["soteria"], abi=soteria_json["abi"])
             cfg["soteriaContract"] = soteriaContract
         return cfg
     else:
         return None
 
-def get_premium_collector_signer(chain_id: str):
-    # TODO: return premium collector signer
-    return ''
+def get_premium_collector(chain_id: str):
+    if chain_id == "1":
+        signer_key = os.getenv("PREMIUM_COLLECTOR")
+        signer_address = os.getenv("PREMIUM_COLLECTOR_ADDRESS")
+        return signer_key, signer_address
+    return ('', '')
 
 def get_network(chainId: str) -> str:
     if chainId in NETWORKS:
@@ -213,30 +216,18 @@ def save_billing_errors(chainId: str, billing_errors: dict) -> bool:
         handle_error({"resource": "utils.save_billing_errors()"}, e, 500)
         return False
 
-def get_price_in_eth(amount_in_usd: float):
-    amount_in_usdc = int(amount_in_usd * 10**6)
-    # call oracle
-    url = f"https://api.1inch.exchange/v3.0/1/quote?fromTokenAddress=0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48&toTokenAddress=0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE&amount={amount_in_usdc}"
-    r = requests.get(url)
-    rjson = r.json()
-
-    if r.status_code != 200 or 'toTokenAmount' not in rjson:
-        sns_publish(f"Error in get_price_in_eth():\nRequest for {url}\nReturned HTTP {r.status_code}\n{r.content.decode('utf-8')}")
-        return 0
-    return int(rjson['toTokenAmount']) 
 
 def get_soteria_policy_holders(chainId: str) -> list:
     cfg = get_config(chainId)
     if cfg is None:
         raise InputException(f"Bad request. Not found config for the chain id: {chainId}")
 
-    # TODO: make contract call
-    policyholder1 = {
-        "address": "0x09748F07b839EDD1d79A429d3ad918f670D602Cd",
-        "coverlimit": 1000,
-    }
-    policyholder2 = {
-        "address": "0x11BB97923209Df97E8c9839E1e394798cb0C0336",
-        "coverlimit": 2000,
-    }
-    return [policyholder1, policyholder2]
+    block_number = cfg['w3'].eth.block_number
+    policies = []
+    # policy id starts from 1
+    policy_count = cfg['soteriaContract'].functions.policyCount().call(block_identifier=block_number)
+    for policy_id in range(1, policy_count+1):
+        policyholder = cfg['soteriaContract'].functions.policyOf(policy_id).call(block_identifier=block_number)
+        coverlimit = cfg['soteriaContract'].functions.coverLimitOf(policy_id).call(block_identifier=block_number)
+        policies.append({"address": policyholder, "coverlimit": coverlimit})
+    return policies

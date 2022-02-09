@@ -74,9 +74,7 @@ def get_premium_for_account(chain_id: str, account: str):
         premium = 0
         for billing in billings:
             premium = premium + billing["premium"]
-        premium_in_eth = get_price_in_eth(premium)
         result["premium"] = premium
-        result["premium_in_eth"] = premium_in_eth
         return result
     except Exception as e:
         handle_error({"resource": "billing.helpers.get_premium_for_account()"}, e, 500)
@@ -90,8 +88,7 @@ def get_soteria_premiums(chain_id: str):
             premium = 0
             for billing in unpaid_billing["billings"]:
                 premium = premium + billing["premium"]
-            premium_in_eth = get_price_in_eth(premium)
-            premiums.append({"account": unpaid_billing["account"], "premium": premium, "premium_in_eth": premium_in_eth})
+            premiums.append({"account": unpaid_billing["account"], "premium": premium})
         return premiums
     except Exception as e:
         handle_error({"resource": "billing.helpers.get_premium_amounts()"}, e, 500)

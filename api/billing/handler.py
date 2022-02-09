@@ -48,7 +48,7 @@ def get_premium_amount_handler(event, context):
         account = params["account"]
         result = get_premium_for_account(chain_id=chain_id, account=account)
         if result is not None:
-            return response({'chain_id': chain_id, 'account': account, 'premium': result["premium"], 'premium_in_eth': result["premium_in_eth"]})
+            return response({'chain_id': chain_id, 'account': account, 'premium': result["premium"]})
         else:
             return error_response()
 

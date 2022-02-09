@@ -4,6 +4,7 @@ from api.utils import *
 def collect_premiums():
     for chain_id in get_supported_chains():
         try:
+            
             print(f"Charging premiums for chain {chain_id} has been started...")
             soteria_premiums = get_soteria_premiums(chain_id)
             
@@ -15,21 +16,27 @@ def collect_premiums():
             policyholders = []
             for soteria_premium in soteria_premiums:
                 policyholders.append(soteria_premium["account"])
-                premiums.append(soteria_premium["premium_in_eth"])
+                premiums.append(soteria_premium["premium"] * 10**18)
             
             print(policyholders)
             print(premiums)
 
-            # TODO: Make contract call to charge premiums
-            signer = get_premium_collector_signer(chain_id)
             cfg = get_config(chain_id)
             if "soteriaContract" not in cfg:
                 raise Exception(f"Soteria contract could not found for chain {chain_id} ")
+
             soteria_contract = cfg["soteriaContract"]
-            w3 = cfg["w3"]
+            w3: Web3 = cfg["w3"]
+            signer_key, signer_address = get_premium_collector(chain_id)
+            nonce = w3.eth.getTransactionCount(signer_address)
+           
+            # TODO: change hardcoded chain id
+            tx = soteria_contract.chargePremiums({"chainId": 4, "from": signer_address, "nonce": nonce })
+            tx_signed = w3.eth.account.sign_transaction(tx, private_key=signer_key)
+            tx_hash = w3.eth.send_raw_transaction(tx_signed.rawTransaction)
+            tx_receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
 
             # save results
-            # TODO: Get timestamp from transaction
             timestamp = get_timestamp()
             for i in range(len(premiums)):
                 print(f"Premium charged for account: {policyholders[i]}. Premium(eth): {premiums[i]}")
