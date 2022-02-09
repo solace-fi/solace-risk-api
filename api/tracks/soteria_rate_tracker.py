@@ -47,6 +47,11 @@ async def track_policy_rates():
     for chain_id in get_supported_chains():
         print(f"Starting Soteria rate tracker for chain {chain_id}...")
         policyholders = get_soteria_policy_holders(chain_id)
+
+        if len(policyholders) == 0:
+            print(f"No policy to track for chain {chain_id}")
+            return
+            
         tasks = []
         for policyholder in policyholders:
             print(f"Rate tracking for {policyholder} started...")
