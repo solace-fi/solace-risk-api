@@ -143,7 +143,7 @@ def get_scores(account, positions):
 
             # init a dataframe to store an account's positions
             portfolio = pd.DataFrame(positions)
-            portfolio.columns = ['network', 'appId','balanceUSD', 'balanceETH']
+            portfolio.columns = ['appId', 'network','balanceUSD', 'balanceETH']
 
             # portfolio of protocols
             balance_by_tier = get_protocol(portfolio, protocol_map, rate_table)
