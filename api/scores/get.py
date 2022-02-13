@@ -147,7 +147,7 @@ def get_scores(account, positions):
 
             # portfolio of protocols
             balance_by_tier = get_protocol(portfolio, protocol_map, rate_table)
-            balance_by_tier['category'] = balance_by_tier['category'].replace(np.nan, 'unrated')
+            balance_by_tier['category'] = balance_by_tier['category'].replace(np.nan, 'unknown')
             
             risk_load_category = create_protocol_correlation(balance_by_tier, correl_value)
             total_score = calc_rate_online(balance_by_tier, risk_load_category, correl_cat)
