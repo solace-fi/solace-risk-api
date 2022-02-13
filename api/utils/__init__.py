@@ -156,10 +156,10 @@ def get_config(chain_id: str):
 
 def get_premium_collector(chain_id: str):
     if chain_id == "1":
-        signer_key = os.getenv("PREMIUM_COLLECTOR")
-        signer_address = os.getenv("PREMIUM_COLLECTOR_ADDRESS")
+        signer_key = os.environ.get("PREMIUM_COLLECTOR")
+        signer_address = os.environ.get("PREMIUM_COLLECTOR_ADDRESS")
         return signer_key, signer_address
-    return ('', '')
+    return None, None
 
 def get_network(chainId: str) -> str:
     if chainId in NETWORKS:
