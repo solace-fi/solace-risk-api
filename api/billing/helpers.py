@@ -7,7 +7,7 @@ from api.utils import *
 def post_premium_charged(chain_id: str, account: str, timestamp: str):
     try:
         billings = get_soteria_billings(chain_id)
-        for billing_by_account in billings[chain_id][account]:
+        for billing_by_account in billings[account]:
             if billing_by_account["charged"] == False:
                 billing_by_account["charged"] = True
                 billing_by_account["charged_time"] = timestamp
