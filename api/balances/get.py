@@ -75,7 +75,7 @@ def parse_positions(s, network):
         positions = list(sorted(positions, key = lambda pos: f"{pos['network']} {pos['appId']}"))
         return positions
     except Exception as e:
-        raise Exception("error parsing data")
+        raise Exception(f"Error parsing data. Error: {e}")
 
 def clean_positions(positions2, account):
     eth_price = fetch_eth_price()
@@ -100,7 +100,7 @@ def clean_positions(positions2, account):
             positions3.append(position)
         return positions3
     except Exception as e:
-        raise Exception("error parsing data")
+        raise Exception(f"error cleaning positions data. Error {e}")
 
 def calculate_weights(positions):
     try:
