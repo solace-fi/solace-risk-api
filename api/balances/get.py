@@ -71,6 +71,7 @@ def parse_positions(s, network):
             s = s[index2+1:]
         # order by network, app
         if network is not None:
+            print(positions)
             positions = list(filter(lambda position: position['network'] == network, positions))
         positions = list(sorted(positions, key = lambda pos: f"{pos['network']} {pos['appId']}"))
         return positions
