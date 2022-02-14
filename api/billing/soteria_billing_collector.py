@@ -43,7 +43,7 @@ def collect_premiums():
             # save results
             timestamp = get_timestamp()
             for i in range(len(premiums)):
-                print(f"Premium charged for account: {policyholders[i]}. Premium(eth): {premiums[i]}")
+                print(f"Premium charged for account: {policyholders[i]}. Premium(USD): {premiums[i]}")
                 post_premium_charged(chain_id, policyholders[i], timestamp)
 
             print(f"Charging premiums for chain {chain_id} has been finished.")
