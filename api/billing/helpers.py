@@ -115,7 +115,9 @@ def get_billings(chain_id: str):
 
 def get_billings_by_account(chain_id: str, account: str):
     billings = get_soteria_billings(chain_id)
-    return billings[account]
+    if account in billings:
+        return billings[account]
+    return []
 
 def error_response():
     return {
