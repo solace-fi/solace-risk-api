@@ -3,8 +3,7 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 import json
-import math
-
+import re
 
 def verify_account(params, cfg):
     if "account" not in params:
@@ -48,7 +47,7 @@ def fetch_eth_price():
 
 def fetch_positions(params):
     api_key = "96e0cc51-a62e-42ca-acee-910ea7d2a241" # only key key, public
-    url = f"https://api.zapper.fi/v1/balances?api_key={api_key}&addresses[]={params['account']}"
+    url = f"https://api.zapper.fi/v1/balances-v3?api_key={api_key}&addresses[]={params['account']}"
     for i in range(1):
         try:
             response = requests.get(url, timeout=600)
@@ -64,14 +63,14 @@ def fetch_positions(params):
 def parse_positions(s, network):
     try:
         positions = []
-        while True:
-            index = s.find('{')
-            index2 = s.find('}\n')
+        matches = re.findall("event: protocol\ndata: {*.*}", s)
+        for match in matches:
+            index = match.find('{')
+            index2 = match.rfind('}')
             if index == -1 or index2 == -1:
                 break
-            position = json.loads(s[index:index2+1])
+            position = json.loads(match[index:index2+1])
             positions.append(position)
-            s = s[index2+1:]
         # order by network, app
         if network is not None:
             positions = list(filter(lambda position: 'network' in position and position['network'] == network, positions))
@@ -87,16 +86,17 @@ def clean_positions(positions2, account):
         account = account.lower()
         for position in positions2:
             # filter out zero balance positions
-            if len(position["balances"][account]["products"]) == 0:
+            if len(position["data"]) == 0:
                 continue
             # filter out nfts and tokens
             if position["appId"] == "tokens" or position["appId"] == "nft":
                 continue
             # flatten
             balanceUSD = 0
-            for pos in position["balances"][account]["products"]:
-                for asset in pos["assets"]:
-                    balanceUSD += asset["balanceUSD"]
+            for pos in position["data"]:
+                if pos["type"] != "position":
+                    continue
+                balanceUSD += pos["balanceUSD"]
             position["balanceUSD"] = balanceUSD
             position["balanceETH"] = balanceUSD / eth_price
             position.pop("balances", None)
