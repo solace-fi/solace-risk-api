@@ -83,6 +83,16 @@ def stringify_error(e):
         traceback = traceback.tb_next
     return s
 
+def get_IP_address():
+    # gets the IP of the lambda instance
+    try:
+        url = "https://checkip.amazonaws.com/"
+        response = requests.get(url, timeout=60)
+        response.raise_for_status()
+        return response.text.rstrip()
+    except Exception as e:
+        return 'unknown'
+
 def get_week_of_month(year, month, day):
     return next(
         (

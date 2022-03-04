@@ -47,15 +47,18 @@ def fetch_eth_price():
     raise Exception("error fetching data")
 
 def fetch_positions(params):
-    for i in range(5):
+    api_key = "96e0cc51-a62e-42ca-acee-910ea7d2a241" # only key key, public
+    url = f"https://api.zapper.fi/v1/balances?api_key={api_key}&addresses[]={params['account']}"
+    for i in range(1):
         try:
-            api_key = "96e0cc51-a62e-42ca-acee-910ea7d2a241" # only key key, public
-            url = f"https://api.zapper.fi/v1/balances?api_key={api_key}&addresses[]={params['account']}"
             response = requests.get(url, timeout=600)
             response.raise_for_status()
+            sns_publish('successful call to zapper get balances')
             return response.text
         except Exception as e:
-            print(e)
+            msg = f"In Solace Risk API get balances. Error fetching data from zapper\nURL   : {url}\nIP    : {get_IP_address()}\nError : {e}"
+            print(msg)
+            sns_publish(msg)
     raise Exception("error fetching data")
 
 def parse_positions(s, network):
