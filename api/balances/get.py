@@ -96,6 +96,10 @@ def clean_positions(positions, account):
                 if pos["type"] != "position":
                     continue
                 balanceUSD += pos["balanceUSD"]
+
+            if balanceUSD == 0:
+                 continue
+
             # don't change the order
             position_info["appId"] = position["appId"]
             position_info["network"] = position["network"]
@@ -132,8 +136,3 @@ def handler(event, context):
         return handle_error(event, e, 400)
     except Exception as e:
         return handle_error(event, e, 500)
-
-
-if __name__ == '__main__':
-    event = {"queryStringParameters": {"chain_id": "1", "account": "0x09748F07b839EDD1d79A429d3ad918f670D602Cd"}}
-    print(handler(event, None))
