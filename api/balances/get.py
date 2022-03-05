@@ -52,7 +52,6 @@ def fetch_positions(params):
         try:
             response = requests.get(url, timeout=600)
             response.raise_for_status()
-            sns_publish('successful call to zapper get balances')
             return response.text
         except Exception as e:
             msg = f"In Solace Risk API get balances. Error fetching data from zapper\nURL   : {url}\nIP    : {get_IP_address()}\nError : {e}"
@@ -79,12 +78,12 @@ def parse_positions(s, network):
     except Exception as e:
         raise Exception(f"Error parsing data. Error: {e}")
 
-def clean_positions(positions2, account):
-    eth_price = fetch_eth_price()
+def clean_positions(positions, account):
     try:
-        positions3 = []
+        results = []
         account = account.lower()
-        for position in positions2:
+        for position in positions:
+            position_info = {}
             # filter out zero balance positions
             if len(position["data"]) == 0:
                 continue
@@ -97,24 +96,15 @@ def clean_positions(positions2, account):
                 if pos["type"] != "position":
                     continue
                 balanceUSD += pos["balanceUSD"]
-            position["balanceUSD"] = balanceUSD
-            position["balanceETH"] = balanceUSD / eth_price
-            position.pop("balances", None)
-            positions3.append(position)
-        return positions3
+
+            position_info["network"] = position["network"]
+            position_info["appId"] = position["appId"]
+            position_info["balanceUSD"] = balanceUSD
+            position_info["balanceETH"] = 0
+            results.append(position_info)
+        return results
     except Exception as e:
         raise Exception(f"error cleaning positions data. Error {e}")
-
-def calculate_weights(positions):
-    try:
-        weighted_positions = []
-        balance_sum = sum([position["balanceETH"] for position in positions])
-        for position in positions:
-            weighted_position = {"protocol": position["appId"], "weight": position["balanceETH"] / balance_sum}
-            weighted_positions.append(weighted_position)
-        return weighted_positions
-    except Exception as e:
-        raise Exception(f"error calculating weights. Error: {e}")
 
 def get_balances(params):
     network = None
