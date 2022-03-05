@@ -96,9 +96,9 @@ def clean_positions(positions, account):
                 if pos["type"] != "position":
                     continue
                 balanceUSD += pos["balanceUSD"]
-
-            position_info["network"] = position["network"]
+            # don't change the order
             position_info["appId"] = position["appId"]
+            position_info["network"] = position["network"]
             position_info["balanceUSD"] = balanceUSD
             position_info["balanceETH"] = 0
             results.append(position_info)
