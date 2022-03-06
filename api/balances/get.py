@@ -1,49 +1,34 @@
 from api.utils import *
-from datetime import datetime
-import pandas as pd
-import numpy as np
 import json
 import re
 
-def verify_account(params, cfg):
-    if "account" not in params:
-        raise InputException("missing account") # check policy id exists
-    try:
-        addr = cfg['w3'].toChecksumAddress(params["account"])
-        if not cfg['w3'].isAddress(addr):
-            raise "invalid address"
-        return addr
-    except Exception as e:
-        raise InputException(f"invalid account: '{params['account']}'") # check policy id exists
-
-def verify_params(params, cfg):
+def verify_params(params):
     if params is None:
         raise InputException("missing params")
-    return {
-        "account": verify_account(params, cfg)
-    }
 
-def fetch_eth_price():
-    for i in range(5):
-        try:
-            url = "https://api.zapper.fi/v1/prices/0x0000000000000000000000000000000000000000?network=ethereum&timeFrame=hour&currency=USD&api_key=96e0cc51-a62e-42ca-acee-910ea7d2a241"
-            response = requests.get(url, timeout=600)
-            response.raise_for_status()
-            res = response.json()
-            # gives prices over the last hour, average
-            prices = res["prices"]
-            count = 0
-            s = 0
-            for price in prices:
-                count += 1
-                s += price[1]
-            price = s / count
-            if price <= 1000 or price >= 10000:
-                raise("price out of range")
-            return price
-        except Exception as e:
-            print(e)
-    raise Exception("error fetching data")
+    if "account" not in params:
+        raise InputException("missing account address")
+    
+    if 'chains' not in params:
+        if 'chain_id' in params:
+            params["chains"] = [int(params['chain_id'])]
+        else:
+            raise InputException(f"Bad request. Chain info is not provided")
+
+    try:
+        cfg = get_config("1")
+        addr = cfg['w3'].toChecksumAddress(params["account"])
+        if not cfg['w3'].isAddress(addr):
+            raise f"Bad request. Invalid address for {params['account']}"
+        params["account"] = addr
+
+        networks = get_networks(params['chains'])
+        if networks is None:
+            raise f"Bad request. Network names are not found for chains: {params['chains']}"
+        params["networks"] = networks
+        return params
+    except Exception as e:
+        raise InputException(f"Error occurred while verifying the params. Error: {e}")
 
 def fetch_positions(params):
     api_key = "96e0cc51-a62e-42ca-acee-910ea7d2a241" # only key key, public
@@ -59,10 +44,10 @@ def fetch_positions(params):
             sns_publish(msg)
     raise Exception("error fetching data")
 
-def parse_positions(s, network):
+def parse_positions(position_txt, networks):
     try:
         positions = []
-        matches = re.findall("event: protocol\ndata: {*.*}", s)
+        matches = re.findall("event: protocol\ndata: {*.*}", position_txt)
         for match in matches:
             index = match.find('{')
             index2 = match.rfind('}')
@@ -71,17 +56,16 @@ def parse_positions(s, network):
             position = json.loads(match[index:index2+1])
             positions.append(position)
         # order by network, app
-        if network is not None:
-            positions = list(filter(lambda position: 'network' in position and position['network'] == network, positions))
+        if networks is not None:
+            positions = list(filter(lambda position: 'network' in position and position['network'] in networks, positions))
         positions = list(sorted(positions, key = lambda pos: f"{pos['network']} {pos['appId']}"))
         return positions
     except Exception as e:
         raise Exception(f"Error parsing data. Error: {e}")
 
-def clean_positions(positions, account):
+def clean_positions(positions):
     try:
         results = []
-        account = account.lower()
         for position in positions:
             position_info = {}
             # filter out zero balance positions
@@ -104,25 +88,17 @@ def clean_positions(positions, account):
             position_info["appId"] = position["appId"]
             position_info["network"] = position["network"]
             position_info["balanceUSD"] = balanceUSD
-            position_info["balanceETH"] = 0
             results.append(position_info)
         return results
     except Exception as e:
         raise Exception(f"error cleaning positions data. Error {e}")
 
 def get_balances(params):
-    network = None
-    if 'chain_id' not in params:
-        raise InputException(f"Bad request. Chain id is not provided")
-    network = get_network(params['chain_id'])
-    if network is None:
-        raise InputException(f"Bad request. Network name is not found for chain id: {params['chain_id']}")
-    cfg = get_config(params['chain_id'])
-    params2 = verify_params(params, cfg)
-    positions = fetch_positions(params2)
-    positions2 = parse_positions(positions, network)
-    positions3 = clean_positions(positions2, params2["account"])
-    return json.dumps(positions3)
+    params = verify_params(params)
+    positions = fetch_positions(params)
+    positions = parse_positions(positions, params["networks"])
+    positions = clean_positions(positions)
+    return json.dumps(positions)
 
 def handler(event, context):
     try:
@@ -136,3 +112,7 @@ def handler(event, context):
         return handle_error(event, e, 400)
     except Exception as e:
         return handle_error(event, e, 500)
+
+if __name__ == '__main__':
+    event = {"queryStringParameters": {"chain_id": "1", "account": "0x09748F07b839EDD1d79A429d3ad918f670D602Cd"}}
+    print(handler(event, None))

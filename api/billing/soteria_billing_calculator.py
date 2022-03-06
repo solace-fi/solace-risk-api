@@ -85,7 +85,7 @@ async def calculate_bill(score_file: str, policyholder: str):
 async def archive_score_file(score_file: str, chain_id: str):
     date_folder = get_date_string()
     filename = get_file_name(score_file)
-    new_key = S3_SOTERIA_PROCESSED_SCORES_FOLDER + chain_id + date_folder + "/" + filename + ".json"
+    new_key = S3_SOTERIA_PROCESSED_SCORES_FOLDER + chain_id + "/" + date_folder + "/" + filename + ".json"
     s3_move(score_file, new_key)
 
 

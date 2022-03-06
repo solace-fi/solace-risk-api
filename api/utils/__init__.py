@@ -129,13 +129,12 @@ headers = {
     "Access-Control-Allow-Methods": "OPTIONS,GET,POST,PUT,DELETE"
 }
 
-alchemy_key = s3_get("alchemy_key.txt", cache=True)
-alchemy_mainnet_key = ""
-ETH_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
+alchemy_config = json.loads(s3_get("alchemy_config.json", cache=True))
 
 class InputException(Exception):
     pass
 
+ETH_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
 ADDRESS_SIZE = 40 # 20 bytes or 40 hex chars
 ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 SOLACE_ADDRESS = "0x501acE9c35E60f03A2af4d484f49F9B1EFde9f40"
@@ -144,37 +143,54 @@ erc20Json = json.loads(s3_get("abi/other/ERC20.json", cache=True))
 ONE_ETHER = 1000000000000000000
 
 # chainId => network
-NETWORKS = {'1': 'ethereum', '4': 'rinkeby'}
-config_s3 = json.loads(s3_get('config.json', cache=True))
+NETWORKS = {1: 'ethereum', 137: 'polygon'}
+config_s3 = json.loads(s3_get('config2.json', cache=True))
 
 def get_supported_chains():
     return config_s3['supported_chains']
 
 def get_config(chain_id: str):
     if chain_id in get_supported_chains():
-        cfg = config_s3[chain_id]
-        w3 = Web3(Web3.HTTPProvider(cfg["alchemyUrl"].format(alchemy_key)))
-        cfg["w3"] = w3
+        if chain_id == "1":
+            cfg = config_s3[chain_id]
+            w3 = Web3(Web3.HTTPProvider(alchemy_config["1"]))
+            cfg["w3"] = w3
 
-        if len(cfg['soteria']) > 0:
-            soteria_json = json.loads(s3_get('abi/soteria/SolaceCoverProduct.json', cache=True))
-            soteriaContract = w3.eth.contract(address=cfg["soteria"], abi=soteria_json["abi"])
-            cfg["soteriaContract"] = soteriaContract
-        return cfg
+            if len(cfg['soteria']) > 0:
+                soteria_json = json.loads(s3_get('abi/soteria/SolaceCoverProduct.json', cache=True))
+                soteriaContract = w3.eth.contract(address=cfg["soteria"], abi=soteria_json["abi"])
+                cfg["soteriaContract"] = soteriaContract
+            return cfg
+        elif chain_id == "137":
+            cfg = config_s3[chain_id]
+            w3 = Web3(Web3.HTTPProvider(alchemy_config["137"]))
+            cfg["w3"] = w3
+
+            if len(cfg['soteria']) > 0:
+                soteria_json = json.loads(s3_get('abi/soteria/SolaceCoverProductV2.json', cache=True))
+                soteriaContract = w3.eth.contract(address=cfg["soteria"], abi=soteria_json["abi"])
+                cfg["soteriaContract"] = soteriaContract
+            return cfg
+        else:
+            return None
     else:
         return None
 
 def get_premium_collector(chain_id: str):
-    if chain_id == "1":
+    if chain_id in get_supported_chains():
         signer_key = os.environ.get("PREMIUM_COLLECTOR")
         signer_address = os.environ.get("PREMIUM_COLLECTOR_ADDRESS")
         return signer_key, signer_address
     return None, None
 
-def get_network(chainId: str) -> str:
-    if chainId in NETWORKS:
-        return NETWORKS[chainId]
-    return None
+def get_networks(chains: list) -> list:
+    networks = []
+    for chain in chains:
+        if chain in NETWORKS:
+           networks.append(NETWORKS[chain])
+    if len(networks) == 0:
+        return None
+    return networks
 
 def get_soteria_billings(chain_id: str) -> dict:
     try:
@@ -194,7 +210,7 @@ def get_billing_errors(chain_id: str) -> dict:
       
 def get_soteria_score_files(chain_id: str) -> List:
     try:
-        score_files = s3_get_files(S3_SOTERIA_SCORES_FOLDER + chain_id)
+        score_files = s3_get_files(S3_SOTERIA_SCORES_FOLDER + chain_id + "/")
         if score_files:
             score_files = list(filter(lambda score_file: score_file[-1] != '/' or 'archived' not in score_file , score_files))
         return score_files
@@ -226,8 +242,7 @@ def save_billing_errors(chainId: str, billing_errors: dict) -> bool:
         handle_error({"resource": "utils.save_billing_errors()"}, e, 500)
         return False
 
-
-def get_soteria_policy_holders(chainId: str) -> list:
+def get_soteri_policies(chainId: str) -> list:
     cfg = get_config(chainId)
     if cfg is None:
         raise InputException(f"Bad request. Not found config for the chain id: {chainId}")
@@ -239,5 +254,12 @@ def get_soteria_policy_holders(chainId: str) -> list:
     for policy_id in range(1, policy_count+1):
         policyholder = cfg['soteriaContract'].functions.ownerOf(policy_id).call(block_identifier=block_number)
         coverlimit = cfg['soteriaContract'].functions.coverLimitOf(policy_id).call(block_identifier=block_number)
-        policies.append({"address": policyholder, "coverlimit": coverlimit})
+
+        # polygon supports multichain positions
+        chains = []
+        if chainId == "137":
+            chains.append(cfg['soteriaContract'].functions.getPolicyChainInfo(policy_id).call(block_identifier=block_number))
+        else:
+            chains.append(1)
+        policies.append({"address": policyholder, "coverlimit": coverlimit, "chains": chains})
     return policies

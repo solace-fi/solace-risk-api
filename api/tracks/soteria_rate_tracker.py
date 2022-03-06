@@ -5,26 +5,26 @@ from datetime import datetime
 import asyncio
 import json
 
-async def get_positions(address: str, chain_id: str):
-    return json.loads(get_balances({"account": address, "chain_id": chain_id}))
+async def get_positions(policy: dict):
+    return json.loads(get_balances({"account": policy["address"], "chains": policy["chains"]}))
 
 
-async def get_score(policyholder: dict, chain_id: str) -> bool:
+async def get_score(policy: dict, chain_id: str) -> bool:
     try:
-        positions = await get_positions(policyholder["address"], chain_id)
-        score = get_scores(policyholder["address"], positions)
+        positions = await get_positions(policy)
+        score = get_scores(policy["address"], positions)
       
         if score is None:
             raise Exception()
         score = json.loads(score)
 
-        await store_rate(policyholder["address"], chain_id, policyholder["coverlimit"], score)
-        return policyholder["address"], True
+        await store_rate(policy["address"], chain_id, policy["coverlimit"], score)
+        return policy["address"], True
     except Exception as e:
         print(
-            f"Error occurred while getting score info for: {policyholder}. Error: {e}"
+            f"Error occurred while getting score info for: {policy}. Error: {e}"
         )
-        return policyholder["address"], False
+        return policy["address"], False
 
 
 async def store_rate(address: str, chain_id: str, coverlimit: float, score: any):
@@ -46,16 +46,16 @@ async def store_rate(address: str, chain_id: str, coverlimit: float, score: any)
 async def track_policy_rates():
     for chain_id in get_supported_chains():
         print(f"Starting Soteria rate tracker for chain {chain_id}...")
-        policyholders = get_soteria_policy_holders(chain_id)
+        policies = get_soteri_policies(chain_id)
 
-        if len(policyholders) == 0:
+        if len(policies) == 0:
             print(f"No policy to track for chain {chain_id}")
             return
             
         tasks = []
-        for policyholder in policyholders:
-            print(f"Rate tracking for {policyholder} started...")
-            tasks.append(asyncio.create_task(get_score(policyholder, chain_id)))
+        for policy in policies:
+            print(f"Rate tracking for {policy} started...")
+            tasks.append(asyncio.create_task(get_score(policy, chain_id)))
 
         try:
             completed_tasks, _ = await asyncio.wait(tasks)
@@ -67,7 +67,6 @@ async def track_policy_rates():
         except Exception as e:
                 print(f"Error occurred while tracking policy rates. Chain Id: {chain_id}, Error: {e}")
         print(f"Soteria rate tracking for chain {chain_id} has been finished")
-
 
 def main(event, context):
     asyncio.run(track_policy_rates())
