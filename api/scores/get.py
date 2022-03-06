@@ -46,7 +46,7 @@ def get_scores(account, positions):
             s3_put(S3_TO_BE_SCORED_FOLDER + date_string + "/" + account + ".json", json.dumps({'unknown_protocols': output_unknown_protocols}))
 
         # sets unknown protocol to highest risk tier
-        scored_portfolio['tier'] = scored_portfolio['tier'].replace(np.nan, 0)  
+        scored_portfolio['tier'] = scored_portfolio['tier'].replace(np.nan, 'F')  
 
         # aggregate portfolio positions by tier
         combined_table = pd.merge(scored_portfolio, rate_table_input, left_on='tier', right_on='tier', how='left')
