@@ -102,7 +102,7 @@ def get_balances(params):
 
 def handler(event, context):
     try:
-        response_body = get_balances(event["body"])
+        response_body = get_balances(json.loads(event["body"]))
         return {
             "statusCode": 200,
             "body": response_body,
