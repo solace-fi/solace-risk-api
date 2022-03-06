@@ -102,7 +102,7 @@ def get_balances(params):
 
 def handler(event, context):
     try:
-        response_body = get_balances(event["queryStringParameters"])
+        response_body = get_balances(event["body"])
         return {
             "statusCode": 200,
             "body": response_body,
@@ -114,5 +114,5 @@ def handler(event, context):
         return handle_error(event, e, 500)
 
 if __name__ == '__main__':
-    event = {"queryStringParameters": {"chain_id": "1", "account": "0x09748F07b839EDD1d79A429d3ad918f670D602Cd"}}
+    event = {"body": {"chain_id": "1", "account": "0x09748F07b839EDD1d79A429d3ad918f670D602Cd"}}
     print(handler(event, None))

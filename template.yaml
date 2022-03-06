@@ -82,7 +82,7 @@ Resources:
           Type: Api
           Properties:
             Path: /balances
-            Method: get
+            Method: post
             RestApiId: !Ref RestApi
   GetScoresFunction:
     Type: AWS::Serverless::Function
