@@ -75,12 +75,7 @@ def clean_positions(positions):
             if position["appId"] == "tokens" or position["appId"] == "nft":
                 continue
             # flatten
-            balanceUSD = 0
-            for pos in position["data"]:
-                if pos["type"] != "position":
-                    continue
-                balanceUSD += pos["balanceUSD"]
-
+            balanceUSD = position["meta"]["total"]
             if balanceUSD == 0:
                  continue
 
