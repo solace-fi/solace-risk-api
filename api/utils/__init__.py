@@ -258,7 +258,7 @@ def get_soteri_policies(chainId: str) -> list:
         # polygon supports multichain positions
         chains = []
         if chainId == "137":
-            chains.append(cfg['soteriaContract'].functions.getPolicyChainInfo(policy_id).call(block_identifier=block_number))
+            chains = cfg['soteriaContract'].functions.getPolicyChainInfo(policy_id).call(block_identifier=block_number)
         else:
             chains.append(1)
         policies.append({"address": policyholder, "coverlimit": coverlimit, "chains": chains})
