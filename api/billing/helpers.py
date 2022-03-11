@@ -122,12 +122,13 @@ def get_billings_by_account(chain_id: str, account: str):
 def error_response():
     return {
         "statusCode": 500,
-        "body": {"message": "Something went wrong"}
+        "body": {"message": "Something went wrong"},
+        "headers": headers
     }
 
 def response(result):
     return {
         "statusCode": 200,
-        "body": json.dumps(result)
+        "body": json.dumps(result),
+        "headers": headers
     }
-    

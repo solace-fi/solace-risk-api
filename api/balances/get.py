@@ -5,26 +5,22 @@ import re
 def verify_params(params):
     if params is None:
         raise InputException("missing params")
-
     if "account" not in params:
         raise InputException("missing account address")
-    
     if 'chains' not in params:
         if 'chain_id' in params:
             params["chains"] = [int(params['chain_id'])]
         else:
             raise InputException(f"Bad request. Chain info is not provided")
-
     try:
         cfg = get_config("1")
         addr = cfg['w3'].toChecksumAddress(params["account"])
         if not cfg['w3'].isAddress(addr):
-            raise f"Bad request. Invalid address for {params['account']}"
+            raise InputException(f"Bad request. Invalid address for {params['account']}")
         params["account"] = addr
-
         networks = get_networks(params['chains'])
         if networks is None:
-            raise f"Bad request. Network names are not found for chains: {params['chains']}"
+            raise InputException(f"Bad request. Network names are not found for chains: {params['chains']}")
         params["networks"] = networks
         return params
     except Exception as e:
@@ -78,7 +74,6 @@ def clean_positions(positions):
             balanceUSD = position["meta"]["total"]
             if balanceUSD == 0:
                  continue
-
             # don't change the order
             position_info["appId"] = position["appId"]
             position_info["network"] = position["network"]
