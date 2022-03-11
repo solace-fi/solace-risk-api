@@ -143,7 +143,7 @@ Resources:
         GetEvent:
           Type: Api
           Properties:
-            Path: /soteria/tracks
+            Path: /tracks
             Method: get
             RestApiId: !Ref RestApi
   SoteriaBillingFunction:
@@ -187,7 +187,7 @@ Resources:
         GetEvent:
           Type: Api
           Properties:
-            Path: /soteria/billings/all
+            Path: /billings/all
             Method: get
             RestApiId: !Ref RestApi
   GetSoteriaBillingsByAccountFunction:
@@ -203,7 +203,7 @@ Resources:
         GetEvent:
           Type: Api
           Properties:
-            Path: /soteria/billings
+            Path: /billings
             Method: get
             RestApiId: !Ref RestApi
   GetSoteriaUnpaidBillingsByAccountFunction:
@@ -219,7 +219,7 @@ Resources:
         GetEvent:
           Type: Api
           Properties:
-            Path: /soteria/billings/unpaid
+            Path: /billings/unpaid
             Method: get
             RestApiId: !Ref RestApi
   GetSoteriaPaidBillingsByAccountFunction:
@@ -235,7 +235,7 @@ Resources:
         GetEvent:
           Type: Api
           Properties:
-            Path: /soteria/billings/paid
+            Path: /billings/paid
             Method: get
             RestApiId: !Ref RestApi
   GetSoteriaPremiumByAccountFunction:
@@ -251,7 +251,7 @@ Resources:
         GetEvent:
           Type: Api
           Properties:
-            Path: /soteria/premium
+            Path: /premium
             Method: get
             RestApiId: !Ref RestApi
   # Data Bucket
