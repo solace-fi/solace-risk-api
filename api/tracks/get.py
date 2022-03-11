@@ -33,13 +33,15 @@ def handler(event, context):
 def __error_response():
     return {
         "statusCode": 500,
-        "body": {"message": "Something went wrong"}
+        "body": {"message": "Something went wrong"},
+        "headers": headers
     }
 
 def __response(result):
     return {
         "statusCode": 200,
-        "body": json.dumps(result)
+        "body": json.dumps(result),
+        "headers": headers
     }
 
 def __verify_chain_id(params):
