@@ -27,8 +27,7 @@ def verify_params(params):
         raise InputException(f"Error occurred while verifying the params. Error: {e}")
 
 def fetch_positions(params):
-    api_key = "96e0cc51-a62e-42ca-acee-910ea7d2a241" # only key key, public
-    url = f"https://api.zapper.fi/v1/balances-v3?api_key={api_key}&addresses[]={params['account']}"
+    url = f"https://api.zapper.fi/v1/balances-v3?api_key={ZAPPER_API_KEY}&addresses[]={params['account']}"
     for i in range(1):
         try:
             response = requests.get(url, timeout=600)
@@ -102,7 +101,3 @@ def handler(event, context):
         return handle_error(event, e, 400)
     except Exception as e:
         return handle_error(event, e, 500)
-
-if __name__ == '__main__':
-    event = {"body": {"chain_id": "1", "account": "0x09748F07b839EDD1d79A429d3ad918f670D602Cd"}}
-    print(handler(event, None))
