@@ -305,6 +305,7 @@ Resources:
                   - "s3:GetObject"
                   - "s3:DeleteObject"
                   - "s3:ListBucket"
+                  - "s3:ListObjectsV2"
                   - "s3:PutObject"
                   - "s3:ReplicateObject"
                   - "s3:RestoreObject"
