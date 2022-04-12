@@ -12,6 +12,10 @@ async def get_positions(policy: dict):
 async def get_score(policy: dict, chain_id: str) -> bool:
     try:
         positions = await get_positions(policy)
+        if len(positions) == 0:
+            print(f"No position found for account: {policy['address']}")
+            return policy["address"], False
+
         score = get_scores(policy["address"], positions)
       
         if score is None:
