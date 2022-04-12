@@ -9,8 +9,14 @@ async def get_positions(policy: dict):
     return json.loads(get_balances({"account": policy["address"], "chains": policy["chains"]}))
 
 
-async def get_score(policy: dict, chain_id: str) -> bool:
+async def get_score(policy: dict, chain_id: str, request_count: int) -> bool:
     try:
+
+        if request_count % 10 == 0:
+            print("Sleeping 20 secs...")
+            time.sleep(20)
+            print("Woke up!")
+
         positions = await get_positions(policy)
         if len(positions) == 0:
             print(f"No position found for account: {policy['address']}")
@@ -57,14 +63,11 @@ async def track_policy_rates():
             return
         
         tasks = []
+        request_count = 0
         for policy in policies:
             print(f"Rate tracking for {policy} started...")
-            tasks.append(asyncio.create_task(get_score(policy, chain_id)))
-
-            if len(tasks) % 10 == 0:
-                print("Sleeping 15 secs...")
-                time.sleep(15)
-                print("Woke up!")
+            request_count += 1
+            tasks.append(asyncio.create_task(get_score(policy, chain_id, request_count)))
 
         try:
             completed_tasks, _ = await asyncio.wait(tasks)
