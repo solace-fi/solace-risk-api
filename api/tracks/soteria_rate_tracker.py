@@ -1,9 +1,9 @@
 from api.utils import *
 from api.balances.get import get_balances
 from api.scores.get import get_scores
-from datetime import datetime
 import asyncio
 import json
+import time
 
 async def get_positions(policy: dict):
     return json.loads(get_balances({"account": policy["address"], "chains": policy["chains"]}))
@@ -51,11 +51,16 @@ async def track_policy_rates():
         if len(policies) == 0:
             print(f"No policy to track for chain {chain_id}")
             return
-            
+        
         tasks = []
         for policy in policies:
             print(f"Rate tracking for {policy} started...")
             tasks.append(asyncio.create_task(get_score(policy, chain_id)))
+
+            if len(tasks) % 10 == 0:
+                print("Sleeping 15 secs...")
+                time.sleep(15)
+                print("Woke up!")
 
         try:
             completed_tasks, _ = await asyncio.wait(tasks)
