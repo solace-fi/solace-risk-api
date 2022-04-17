@@ -13,8 +13,8 @@ async def get_score(policy: dict, chain_id: str, request_count: int) -> bool:
     try:
 
         if request_count % 10 == 0:
-            print("Sleeping 20 secs...")
-            time.sleep(20)
+            print("Sleeping 15 secs...")
+            time.sleep(15)
             print("Woke up!")
 
         positions = await get_positions(policy)

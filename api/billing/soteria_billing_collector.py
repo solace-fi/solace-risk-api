@@ -2,7 +2,11 @@ from api.billing.helpers import *
 from api.utils import *
 
 def collect_premiums():
-    for chain_id in get_supported_chains():
+    if len(get_billing_chains()) == 0:
+        print("No supported chain to collect billings")
+        return
+
+    for chain_id in get_billing_chains():
         try:
             signer_key, signer_address = get_premium_collector(chain_id)
             if signer_key is None or signer_address is None:
@@ -33,7 +37,7 @@ def collect_premiums():
             soteria_contract = cfg["soteriaContract"]
             nonce = w3.eth.getTransactionCount(signer_address)
            
-            tx = soteria_contract.functions.chargePremiums(policyholders, premiums).buildTransaction({"chainId": chain_id, "from": signer_address, "nonce": nonce})
+            tx = soteria_contract.functions.chargePremiums(policyholders, premiums).buildTransaction({"chainId": int(chain_id), "from": signer_address, "nonce": nonce})
             tx_signed = w3.eth.account.sign_transaction(tx, private_key=signer_key)
             tx_hash = w3.eth.send_raw_transaction(tx_signed.rawTransaction)
             tx_receipt = w3.eth.wait_for_transaction_receipt(tx_hash)
