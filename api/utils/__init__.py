@@ -150,6 +150,11 @@ ZAPPER_API_KEY = s3_get('zapper.json', cache=True)
 def get_supported_chains():
     return config_s3['supported_chains']
 
+def get_billing_chains():
+    if 'billing_chains' in config_s3:
+        return config_s3['billing_chains']
+    return []
+
 def get_config(chain_id: str):
     if chain_id in get_supported_chains():
         if chain_id == "1":
