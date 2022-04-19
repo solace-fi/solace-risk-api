@@ -146,6 +146,7 @@ ONE_ETHER = 1000000000000000000
 NETWORKS = {1: 'ethereum', 137: 'polygon'}
 config_s3 = json.loads(s3_get('config2.json', cache=True))
 ZAPPER_API_KEY = s3_get('zapper.json', cache=True)
+COVALENT_API_KEY = s3_get('covalent.json', cache=True)
 
 def get_supported_chains():
     return config_s3['supported_chains']
