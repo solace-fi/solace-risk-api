@@ -69,7 +69,7 @@ def handler(event, context):
 
         return {
             "statusCode": 200,
-            "body": result,
+            "body": json.dumps(result),
             "headers": headers
         }
     except InputException as e:
