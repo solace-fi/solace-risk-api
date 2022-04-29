@@ -88,7 +88,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: SolaceRiskDataTrackBalancesFunction
-      Handler: api/balances/track.handler
+      Handler: api/balances/tracker.handler
       Runtime: python3.8
       MemorySize: 128
       Timeout: 900

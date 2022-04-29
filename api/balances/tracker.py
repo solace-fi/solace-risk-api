@@ -3,7 +3,8 @@ import json
 import re
 from datetime import datetime
 from math import floor
-from api.balances.get import get_balances
+import api.balances.get
+get_balances = api.balances.get.get_balances
 
 def track():
     least_recent_account = ""
