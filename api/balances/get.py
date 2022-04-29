@@ -1,7 +1,10 @@
 from api.utils import *
 import json
 import re
+from datetime import datetime
+from math import floor
 
+# verify the parameters
 def verify_params(params):
     if params is None:
         raise InputException("missing params")
@@ -26,6 +29,7 @@ def verify_params(params):
     except Exception as e:
         raise InputException(f"Error occurred while verifying the params. Error: {e}")
 
+# fetches the positions of an account from zapper
 def fetch_positions(params):
     url = f"https://api.zapper.fi/v1/balances-v3?api_key={ZAPPER_API_KEY}&addresses[]={params['account']}"
     for i in range(1):
@@ -39,7 +43,8 @@ def fetch_positions(params):
             sns_publish(msg)
     raise Exception("error fetching data")
 
-def parse_positions(position_txt, networks):
+# parses the zapper response object
+def parse_positions(position_txt):
     try:
         positions = []
         matches = re.findall("event: protocol\ndata: {*.*}", position_txt)
@@ -50,14 +55,11 @@ def parse_positions(position_txt, networks):
                 break
             position = json.loads(match[index:index2+1])
             positions.append(position)
-        # order by network, app
-        if networks is not None:
-            positions = list(filter(lambda position: 'network' in position and position['network'] in networks, positions))
-        positions = list(sorted(positions, key = lambda pos: f"{pos['network']} {pos['appId']}"))
         return positions
     except Exception as e:
         raise Exception(f"Error parsing data. Error: {e}")
 
+# removes unnecessary info
 def clean_positions(positions):
     try:
         results = []
@@ -82,16 +84,71 @@ def clean_positions(positions):
     except Exception as e:
         raise Exception(f"error cleaning positions data. Error {e}")
 
-def get_balances(params):
-    params = verify_params(params)
-    positions = fetch_positions(params)
-    positions = parse_positions(positions, params["networks"])
-    positions = clean_positions(positions)
-    return json.dumps(positions)
+# writes the positions to cache
+def cache_positions(positions_parsed, positions_cleaned, account):
+    # write positions to cache
+    record = {
+        "timestamp": floor(datetime.now().timestamp()),
+        "positions_parsed": positions_parsed,
+        "positions_cleaned": positions_cleaned
+    }
+    s3_put(f"positions-cache/{account}.json", json.dumps(record))
+    try:
+        cache = json.loads(s3_get("positions-cache.json"))
+    except Exception as e:
+        cache = {}
+    cache[account] = record
+    s3_put("positions-cache.json", json.dumps(cache))
 
+# removes positions that are not on one of the requested networks
+def filter_positions(positions, networks):
+    # order by network, app
+    if networks is not None:
+        positions = list(filter(lambda position: 'network' in position and position['network'] in networks, positions))
+    positions = list(sorted(positions, key = lambda pos: f"{pos['network']} {pos['appId']}"))
+    return positions
+
+# returns the balances of an account
+# attempts to read from cache before reading from zapper
+def get_balances(params, max_cache_age=86400):
+    #print(f"fetching balances of {json.dumps(params)}")
+    params = verify_params(params)
+    try:
+        #print("attempting to read from cache")
+        cache = json.loads(s3_get(f"positions-cache/{params['account']}.json"))
+        age = floor(datetime.now().timestamp()) - cache['timestamp']
+        if age > max_cache_age:
+            raise Exception("cache too old")
+        #positions_parsed = cache['positions_parsed']
+        positions_cleaned = cache['positions_cleaned']
+    except Exception as e:
+        #print("fetching from zapper")
+        positions_raw = fetch_positions(params)
+        positions_parsed = parse_positions(positions_raw)
+        positions_cleaned = clean_positions(positions_parsed)
+        cache_positions(positions_parsed, positions_cleaned, params['account'])
+    positions_filtered = filter_positions(positions_cleaned, params["networks"])
+    return json.dumps(positions_filtered)
+
+# records that a lookup was made on an accounts balances
+# roughly equivalent to saying a wallet connected to the frontend
+# wallets that connected recently will be maintained in cache
+def record_connect(params):
+    params = verify_params(params)
+    account = params['account']
+    filename = "latest-connect.json"
+    try:
+        latest_connect = json.loads(s3_get(filename))
+    except Exception as e:
+        latest_connect = {}
+    latest_connect[account] = floor(datetime.now().timestamp())
+    s3_put(filename, json.dumps(latest_connect))
+
+# lambda handler
 def handler(event, context):
     try:
         response_body = get_balances(json.loads(event["body"]))
+        record_connect(json.loads(event["body"]))
         return {
             "statusCode": 200,
             "body": response_body,
