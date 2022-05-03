@@ -14,9 +14,9 @@ def __get_thickers(params):
 def __calculate_price_change(prev_price_data: dict, curr_price_data: dict):
     prev_price = prev_price_data["price"]
     curr_price = curr_price_data["price"]
-    diff = abs(curr_price - prev_price)
-    percentage = float(diff / prev_price + 1)
-    return {"date": curr_price_data["date"], "price": curr_price,  "change": percentage}
+    #diff = abs(curr_price - prev_price)
+    change = float(curr_price / prev_price)
+    return {"date": curr_price_data["date"], "price": curr_price,  "change": change}
 
 def get_price_history(params):
     try:
