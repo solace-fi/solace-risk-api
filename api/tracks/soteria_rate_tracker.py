@@ -11,12 +11,6 @@ async def get_positions(policy: dict):
 
 async def get_score(policy: dict, chain_id: str, request_count: int) -> bool:
     try:
-
-        if request_count % 10 == 0:
-            print("Sleeping 15 secs...")
-            time.sleep(15)
-            print("Woke up!")
-
         positions = await get_positions(policy)
         if len(positions) == 0:
             print(f"No position found for account: {policy['address']}")
