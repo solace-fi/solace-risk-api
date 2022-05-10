@@ -272,7 +272,7 @@ Resources:
       Type: AWS::Serverless::Function
       Properties:
         FunctionName: SolaceRiskDataGetPriceHistoryFunction
-        Handler: api/price-history/get.handler
+        Handler: api/pricehistory/get.handler
         Runtime: python3.8
         MemorySize: 128
         Timeout: 600
@@ -282,6 +282,22 @@ Resources:
             Type: Api
             Properties:
               Path: /price-history
+              Method: get
+              RestApiId: !Ref RestApi
+  GetVolatilityFunction:
+      Type: AWS::Serverless::Function
+      Properties:
+        FunctionName: SolaceRiskDataGetVolatilityFunction
+        Handler: api/volatility/get.handler
+        Runtime: python3.8
+        MemorySize: 128
+        Timeout: 600
+        Role: !GetAtt LambdaExecutionRole.Arn
+        Events:
+          GetEvent:
+            Type: Api
+            Properties:
+              Path: /volatility
               Method: get
               RestApiId: !Ref RestApi
   # Data Bucket
