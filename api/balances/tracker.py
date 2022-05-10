@@ -12,6 +12,7 @@ def track():
     notes = ""
     now = floor(datetime.now().timestamp())
     policies_updated = False
+    policyholders = set()
     cfg1 = get_config("1")
     cfg137 = get_config("137")
     # read cache
@@ -41,8 +42,7 @@ def track():
                 policies_updated = True
                 policyholder = soteriaContracts[swcv].functions.ownerOf(policyID).call()
                 policies[swcv].append({'policyID': policyID, 'policyholder': policyholder})
-                #sns_publish(f"in risk data zapper cache. new policy detected\nproduct: {swcv}\npolicyID: {policyID}\npolicyholder: {policyholder}")
-                #print(f"in risk data zapper cache. new policy detected\nproduct: {swcv}\npolicyID: {policyID}\npolicyholder: {policyholder}")
+                policyholders.add(policyholder)
             else:
                 policyholder = query[0]['policyholder']
             # fill holes in position cache
@@ -57,16 +57,19 @@ def track():
                     notes = f"holds {swcv} policyID {policyID}"
     # also maintain wallets that connected to frontend within last week
     for account in latest_connect:
-        pos = positions[account]
-        age = now - latest_connect[account]
-        if age < 604800 and pos['timestamp'] < least_recent_timestamp:
-            least_recent_account = account
-            least_recent_timestamp = ts
-            notes = "connected to frontend"
+        if account in policyholders: # dedup policyholders
+            continue
+        if account in positions:
+            pos = positions[account]
+            age = now - latest_connect[account]
+            if age < 604800 and pos['timestamp'] < least_recent_timestamp:
+                least_recent_account = account
+                least_recent_timestamp = pos['timestamp']
+                notes = "connected to frontend"
     # refresh cache of single policy at a time
     get_balances({'account': least_recent_account, 'chains': [1,137]}, max_cache_age=0)
     #sns_publish(f"in risk data zapper cache. refreshing {least_recent_account}\n{notes}")
-    #print(f"in risk data zapper cache. refreshing {least_recent_account}\n{notes}")
+    print(f"in risk data zapper cache. refreshing {least_recent_account}\n{notes}")
     # record policies to cache
     if policies_updated:
         s3_put("policies-cache.json", json.dumps(policies))
