@@ -329,7 +329,7 @@ def handler(event, context):
         if params is None:
             result = {}
         else:
-            result = get_price_history(params)
+            result = get_volatility(params)
 
         return {
             "statusCode": 200,
