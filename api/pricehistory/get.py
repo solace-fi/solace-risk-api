@@ -5,7 +5,8 @@ from datetime import datetime, timedelta
 def __get_thickers(params):
     tickers = []
     if "tickers" not in params:
-        tickers
+        return tickers
+        
     for ticker in params["tickers"].split(","):
         if len(ticker) > 0:
             tickers.append(ticker.strip().upper())
