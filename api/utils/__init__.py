@@ -27,6 +27,7 @@ S3_BILLING_ERRORS_FILE = 'billing_errors.json'
 S3_TO_BE_SCORED_FOLDER = "to-be-scored/"
 S3_ASKED_FOR_QUOTE_FOLDER = 'asked-for-quote/'
 S3_SERIES_FILE = 'current-rate-data/series.json'
+S3_VOLATILITY_CACHE_FOLDER = 'volatility-cache/'
 
 s3_client = boto3.client("s3", region_name="us-west-2")
 s3_resource = boto3.resource("s3", region_name="us-west-2")

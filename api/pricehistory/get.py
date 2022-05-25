@@ -2,10 +2,11 @@ from api.utils import *
 from datetime import datetime, timedelta
 
 
-def __get_thickers(params):
+def __get_tickers(params):
     tickers = []
     if "tickers" not in params:
-        tickers
+        return tickers
+
     for ticker in params["tickers"].split(","):
         if len(ticker) > 0:
             tickers.append(ticker.strip().upper())
@@ -20,7 +21,7 @@ def __calculate_price_change(prev_price_data: dict, curr_price_data: dict):
 
 def get_price_history(params):
     try:
-        tickers = __get_thickers(params)
+        tickers = __get_tickers(params)
         start_date = get_date_string()
         end_date = get_date_string()
 
