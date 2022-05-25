@@ -11,12 +11,6 @@ async def get_positions(policy: dict):
 
 async def get_score(policy: dict, chain_id: str, request_count: int) -> bool:
     try:
-
-        if request_count % 10 == 0:
-            print("Sleeping 15 secs...")
-            time.sleep(15)
-            print("Woke up!")
-
         positions = await get_positions(policy)
         if len(positions) == 0:
             print(f"No position found for account: {policy['address']}")
@@ -56,7 +50,7 @@ async def store_rate(address: str, chain_id: str, coverlimit: float, score: any)
 async def track_policy_rates():
     for chain_id in get_supported_chains():
         print(f"Starting Soteria rate tracker for chain {chain_id}...")
-        policies = get_soteri_policies(chain_id)
+        policies = get_soteria_policies(chain_id)
 
         if len(policies) == 0:
             print(f"No policy to track for chain {chain_id}")

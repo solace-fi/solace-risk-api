@@ -13,6 +13,3 @@ eth-typing==2.2.2
 eth-utils==1.10.0
 pandas==1.3.5
 numpy==1.21.4
-scipy==1.8.0
-metalog==0.2.2
-matplotlib

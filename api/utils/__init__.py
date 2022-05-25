@@ -8,6 +8,7 @@ import sys
 from datetime import datetime
 from calendar import monthcalendar
 import requests
+import time
 
 import web3
 Web3 = web3.Web3
@@ -43,7 +44,19 @@ def s3_get(key, cache=False):
         return res
 
 def s3_put(key, body):
-    s3_client.put_object(Bucket=DATA_BUCKET, Body=body, Key=key)
+    # TODO: figure out why we're getting this notification
+    # An error occurred (SlowDown) when calling the PutObject operation (reached max retries: 4): Please reduce your request rate.
+    # adding retries is just a patch on what is likely an optimization issue
+    err = ""
+    for i in range(5):
+        try:
+            s3_client.put_object(Bucket=DATA_BUCKET, Body=body, Key=key)
+            return
+        except Exception as e:
+            err = e
+            time.sleep(1)
+    if err != "":
+        raise err
 
 def s3_move(key: str, new_key: str):
     copy_source = {'Bucket': DATA_BUCKET, 'Key': key}
@@ -59,7 +72,7 @@ def s3_get_files(folder):
         for content in contents:
             files.append(content['Key'])
     return files
-    
+
 def sns_publish(message):
     sns_client.publish(
         TopicArn=DEAD_LETTER_TOPIC,
@@ -163,7 +176,6 @@ def get_config(chain_id: str):
             cfg = config_s3[chain_id]
             w3 = Web3(Web3.HTTPProvider(alchemy_config["1"]))
             cfg["w3"] = w3
-
             if len(cfg['soteria']) > 0:
                 soteria_json = json.loads(s3_get('abi/soteria/SolaceCoverProduct.json', cache=True))
                 soteriaContract = w3.eth.contract(address=cfg["soteria"], abi=soteria_json["abi"])
@@ -173,7 +185,6 @@ def get_config(chain_id: str):
             cfg = config_s3[chain_id]
             w3 = Web3(Web3.HTTPProvider(alchemy_config["137"]))
             cfg["w3"] = w3
-
             if len(cfg['soteria']) > 0:
                 soteria_json = json.loads(s3_get('abi/soteria/SolaceCoverProductV2.json', cache=True))
                 soteriaContract = w3.eth.contract(address=cfg["soteria"], abi=soteria_json["abi"])
@@ -215,7 +226,7 @@ def get_billing_errors(chain_id: str) -> dict:
     except Exception as e:
         print(f"No billings error file found for chain {chain_id}. Creating new one..")
         return {}
-      
+
 def get_soteria_score_files(chain_id: str) -> List:
     try:
         score_files = s3_get_files(S3_SOTERIA_SCORES_FOLDER + chain_id + "/")
@@ -250,11 +261,10 @@ def save_billing_errors(chainId: str, billing_errors: dict) -> bool:
         handle_error({"resource": "utils.save_billing_errors()"}, e, 500)
         return False
 
-def get_soteri_policies(chainId: str) -> list:
+def get_soteria_policies(chainId: str) -> list:
     cfg = get_config(chainId)
     if cfg is None:
         raise InputException(f"Bad request. Not found config for the chain id: {chainId}")
-
     block_number = cfg['w3'].eth.block_number
     policies = []
     # policy id starts from 1
@@ -262,7 +272,6 @@ def get_soteri_policies(chainId: str) -> list:
     for policy_id in range(1, policy_count+1):
         policyholder = cfg['soteriaContract'].functions.ownerOf(policy_id).call(block_identifier=block_number)
         coverlimit = cfg['soteriaContract'].functions.coverLimitOf(policy_id).call(block_identifier=block_number)
-
         # polygon supports multichain positions
         chains = []
         if chainId == "137":
