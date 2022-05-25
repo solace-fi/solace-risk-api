@@ -50,7 +50,7 @@ async def store_rate(address: str, chain_id: str, coverlimit: float, score: any)
 async def track_policy_rates():
     for chain_id in get_supported_chains():
         print(f"Starting Soteria rate tracker for chain {chain_id}...")
-        policies = get_soteri_policies(chain_id)
+        policies = get_soteria_policies(chain_id)
 
         if len(policies) == 0:
             print(f"No policy to track for chain {chain_id}")
