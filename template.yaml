@@ -130,11 +130,11 @@ Resources:
             Path: /series
             Method: get
             RestApiId: !Ref RestApi
-  SoteriaScoreTrackerFunction:
+  MainnetScoreTrackerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: SolaceRiskDataTrackScoresFunction
-      Handler: api/tracks/soteria_rate_tracker.main
+      FunctionName: SolaceRiskDataMainnetScoreTrackerFunction1
+      Handler: api/tracks/mainnet.main
       Runtime: python3.8
       MemorySize: 1024
       Timeout: 600
@@ -144,6 +144,34 @@ Resources:
           Type: Schedule
           Properties:
             Schedule: rate(60 minutes)
+  PolygonScoreTrackerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataPolygonScoreTrackerFunction1
+      Handler: api/tracks/polygon.main
+      Runtime: python3.8
+      MemorySize: 1024
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(60 minutes)
+  ScoreTrackerScalerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataScoreTrackerScalerFunction
+      Handler: api/tracks/scaler.main
+      Runtime: python3.8
+      MemorySize: 1024
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(10 minutes)
   GetSoteriaScoreTracksFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -282,22 +310,6 @@ Resources:
             Type: Api
             Properties:
               Path: /price-history
-              Method: get
-              RestApiId: !Ref RestApi
-  GetVolatilityFunction:
-      Type: AWS::Serverless::Function
-      Properties:
-        FunctionName: SolaceRiskDataGetVolatilityFunction
-        Handler: api/volatility/get.handler
-        Runtime: python3.8
-        MemorySize: 128
-        Timeout: 600
-        Role: !GetAtt LambdaExecutionRole.Arn
-        Events:
-          GetEvent:
-            Type: Api
-            Properties:
-              Path: /volatility
               Method: get
               RestApiId: !Ref RestApi
   # Data Bucket

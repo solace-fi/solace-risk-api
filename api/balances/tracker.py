@@ -12,8 +12,9 @@ def track():
     notes = ""
     now = floor(datetime.now().timestamp())
     policies_updated = False
-    cfg1 = get_config("1")
-    cfg137 = get_config("137")
+    policyholders = set()
+    supported_chains = get_supported_chains()
+
     # read cache
     try:
         latest_connect = json.loads(s3_get("latest-connect.json"))
@@ -29,18 +30,21 @@ def track():
     except Exception as e:
         positions = {}
     # fill any holes in policy and position caches (including new policies)
-    soteriaContracts = {"swcv1": cfg1['soteriaContract'], "swcv2": cfg137['soteriaContract']}
+    swc_contracts = get_swc_contracts()
     # loop across all products
-    for swcv in ["swcv1", "swcv2"]:
-        policy_count = soteriaContracts[swcv].functions.policyCount().call()
+    for swc in swc_contracts:
+        policy_count = swc["instance"].functions.policyCount().call()
+        swc_version = "swcv" + str(swc['version'])
+
         # loop across policies
         for policyID in range(1, policy_count+1):
             # fill holes in policy cache
-            query = list(filter(lambda policy: policy['policyID'] == policyID, policies[swcv]))
+            query = list(filter(lambda policy: policy['policyID'] == policyID, policies[swc_version]))
             if len(query) == 0:
                 policies_updated = True
-                policyholder = soteriaContracts[swcv].functions.ownerOf(policyID).call()
-                policies[swcv].append({'policyID': policyID, 'policyholder': policyholder})
+                policyholder = swc["instance"].functions.ownerOf(policyID).call()
+                policies[swc_version].append({'policyID': policyID, 'policyholder': policyholder})
+                policyholders.add(policyholder)
                 #sns_publish(f"in risk data zapper cache. new policy detected\nproduct: {swcv}\npolicyID: {policyID}\npolicyholder: {policyholder}")
                 #print(f"in risk data zapper cache. new policy detected\nproduct: {swcv}\npolicyID: {policyID}\npolicyholder: {policyholder}")
             else:
@@ -48,25 +52,28 @@ def track():
             # fill holes in position cache
             if policyholder not in positions:
                 #print(f"caching {policyholder}")
-                get_balances({'account': policyholder, 'chains': [1,137]})
+                get_balances({'account': policyholder, 'chains': supported_chains})
             else:
                 pos = positions[policyholder]
                 if pos['timestamp'] < least_recent_timestamp:
                     least_recent_account = policyholder
                     least_recent_timestamp = pos['timestamp']
-                    notes = f"holds {swcv} policyID {policyID}"
+                    notes = f"holds {swc_version} policyID {policyID}"
     # also maintain wallets that connected to frontend within last week
     for account in latest_connect:
-        pos = positions[account]
-        age = now - latest_connect[account]
-        if age < 604800 and pos['timestamp'] < least_recent_timestamp:
-            least_recent_account = account
-            least_recent_timestamp = ts
-            notes = "connected to frontend"
+        if account in policyholders:
+            continue
+        if account in positions:
+            pos = positions[account]
+            age = now - latest_connect[account]
+            if age < 604800 and pos['timestamp'] < least_recent_timestamp:
+                least_recent_account = account
+                least_recent_timestamp =  pos['timestamp']
+                notes = "connected to frontend"
     # refresh cache of single policy at a time
-    get_balances({'account': least_recent_account, 'chains': [1,137]}, max_cache_age=0)
+    get_balances({'account': least_recent_account, 'chains': supported_chains}, max_cache_age=0)
     #sns_publish(f"in risk data zapper cache. refreshing {least_recent_account}\n{notes}")
-    #print(f"in risk data zapper cache. refreshing {least_recent_account}\n{notes}")
+    print(f"in risk data zapper cache. refreshing {least_recent_account}\n{notes}")
     # record policies to cache
     if policies_updated:
         s3_put("policies-cache.json", json.dumps(policies))
@@ -83,3 +90,6 @@ def handler(event, context):
         return handle_error(event, e, 400)
     except Exception as e:
         return handle_error(event, e, 500)
+
+if __name__ == "__main__":
+    handler(None, None)

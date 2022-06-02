@@ -18,9 +18,9 @@ import asn1tools
 
 DATA_BUCKET = os.environ.get("DATA_BUCKET", "risk-data.solace.fi.data")
 DEAD_LETTER_TOPIC = os.environ.get("DEAD_LETTER_TOPIC", "arn:aws:sns:us-west-2:151427405638:RiskDataDeadLetterQueue")
-S3_SOTERIA_SCORES_FOLDER = 'soteria-scores/'
+S3_SOTERIA_SCORES_FOLDER = 'soteria-scores/TEST/'
 S3_SOTERIA_PROCESSED_SCORES_FOLDER = 'soteria-processed-scores/'
-S3_BILLINGS_FOLDER = 'soteria-billings/'
+S3_BILLINGS_FOLDER = 'soteria-billings/TEST'
 S3_BILLINGS_FILE = 'billings.json'
 S3_BILLING_ERRORS_FILE = 'billing_errors.json'
 S3_TO_BE_SCORED_FOLDER = "to-be-scored/"
@@ -39,6 +39,14 @@ def s3_get(key, cache=False):
         return s3_cache[key]
     else:
         res = s3_client.get_object(Bucket=DATA_BUCKET, Key=key)["Body"].read().decode("utf-8").strip()
+        s3_cache[key] = res
+        return res
+
+def s3_get_zip(key, cache=False):
+    if cache and key in s3_cache:
+        return s3_cache[key]
+    else:
+        res = s3_client.get_object(Bucket=DATA_BUCKET, Key=key)["Body"].read()
         s3_cache[key] = res
         return res
 
@@ -112,8 +120,12 @@ def get_timestamp():
 
 def handle_error(event, e, statusCode):
     print(e)
-    resource = event["resource"] if "resource" in event else ".unknown()"
-    queryStringParameters = event["queryStringParameters"] if "queryStringParameters" in event else ""
+
+    queryStringParameters = ""
+    resource = ".unknown()"
+    if event is not None:
+        resource = event["resource"]
+        queryStringParameters = event["queryStringParameters"] if "queryStringParameters" in event else ""
     sns_message = "The following {} error occurred in solace-risk-data{}:\n{}\n{}".format(statusCode, resource, queryStringParameters, stringify_error(e))
     sns_publish(sns_message)
     http_message = str(e)
@@ -145,44 +157,20 @@ ONE_ETHER = 1000000000000000000
 
 # chainId => network
 NETWORKS = {1: 'ethereum', 137: 'polygon'}
-config_s3 = json.loads(s3_get('config2.json', cache=True))
+config_s3 = json.loads(s3_get('config3.json', cache=True))
 ZAPPER_API_KEY = s3_get('zapper.json', cache=True)
 COVALENT_API_KEY = s3_get('covalent.json', cache=True)
 
 def get_supported_chains():
-    return config_s3['supported_chains']
+    supported_chains = []
+    for chain in config_s3['supported_chains']:
+        supported_chains.append(int(chain))
+    return supported_chains
 
 def get_billing_chains():
     if 'billing_chains' in config_s3:
         return config_s3['billing_chains']
     return []
-
-def get_config(chain_id: str):
-    if chain_id in get_supported_chains():
-        if chain_id == "1":
-            cfg = config_s3[chain_id]
-            w3 = Web3(Web3.HTTPProvider(alchemy_config["1"]))
-            cfg["w3"] = w3
-
-            if len(cfg['soteria']) > 0:
-                soteria_json = json.loads(s3_get('abi/soteria/SolaceCoverProduct.json', cache=True))
-                soteriaContract = w3.eth.contract(address=cfg["soteria"], abi=soteria_json["abi"])
-                cfg["soteriaContract"] = soteriaContract
-            return cfg
-        elif chain_id == "137":
-            cfg = config_s3[chain_id]
-            w3 = Web3(Web3.HTTPProvider(alchemy_config["137"]))
-            cfg["w3"] = w3
-
-            if len(cfg['soteria']) > 0:
-                soteria_json = json.loads(s3_get('abi/soteria/SolaceCoverProductV2.json', cache=True))
-                soteriaContract = w3.eth.contract(address=cfg["soteria"], abi=soteria_json["abi"])
-                cfg["soteriaContract"] = soteriaContract
-            return cfg
-        else:
-            return None
-    else:
-        return None
 
 def get_premium_collector(chain_id: str):
     if chain_id in get_supported_chains():
@@ -194,8 +182,8 @@ def get_premium_collector(chain_id: str):
 def get_networks(chains: list) -> list:
     networks = []
     for chain in chains:
-        if chain in NETWORKS:
-           networks.append(NETWORKS[chain])
+        if int(chain) in NETWORKS:
+            networks.append(NETWORKS[int(chain)])
     if len(networks) == 0:
         return None
     return networks
@@ -271,3 +259,34 @@ def get_soteri_policies(chainId: str) -> list:
             chains.append(1)
         policies.append({"address": policyholder, "coverlimit": coverlimit, "chains": chains})
     return policies
+
+def get_swc_contracts():
+    # get supported chains
+    if 'supported_chains' not in config_s3:
+        raise Exception(f"No config found for supported chains")
+    supported_chains = config_s3['supported_chains']
+
+    contracts = []
+    for chain in supported_chains:
+        # web3
+        if chain not in alchemy_config:
+            raise Exception(f"No web3 config found for chain {chain}")
+        w3 = Web3(Web3.HTTPProvider(alchemy_config[chain]))
+    
+        # contracts
+        if "contracts" not in config_s3[chain]:
+            raise Exception(f"No contract config found for chain {chain}")
+        
+        if len(config_s3[chain]["contracts"]) == 0:
+            raise Exception(f"No contract config found for chain {chain}")
+    
+        for contract in config_s3[chain]["contracts"]:
+            abi = json.loads(s3_get(contract["abi"], cache=True))
+            instance = w3.eth.contract(address=contract["address"], abi=abi)
+            contracts.append(
+                {   "chain": chain,
+                    "version": contract["version"],
+                    "instance": instance
+                }
+            )
+    return contracts
