@@ -90,14 +90,14 @@ Resources:
       FunctionName: SolaceRiskDataTrackBalancesFunction
       Handler: api/balances/tracker.handler
       Runtime: python3.8
-      MemorySize: 128
+      MemorySize: 512
       Timeout: 900
       Role: !GetAtt LambdaExecutionRole.Arn
       Events:
         ScheduledEvent:
           Type: Schedule
           Properties:
-            Schedule: rate(5 minutes)
+            Schedule: rate(2 minutes)
   GetScoresFunction:
     Type: AWS::Serverless::Function
     Properties:

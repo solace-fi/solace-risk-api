@@ -17,10 +17,6 @@ def track():
     cfg137 = get_config("137")
     # read cache
     try:
-        latest_connect = json.loads(s3_get("latest-connect.json"))
-    except Exception as e:
-        latest_connect = {}
-    try:
         policies = json.loads(s3_get("policies-cache.json"))
     except Exception as e:
         policies = {"swcv1":[], "swcv2":[]}
@@ -55,17 +51,6 @@ def track():
                     least_recent_account = policyholder
                     least_recent_timestamp = pos['timestamp']
                     notes = f"holds {swcv} policyID {policyID}"
-    # also maintain wallets that connected to frontend within last week
-    for account in latest_connect:
-        if account in policyholders: # dedup policyholders
-            continue
-        if account in positions:
-            pos = positions[account]
-            age = now - latest_connect[account]
-            if age < 604800 and pos['timestamp'] < least_recent_timestamp:
-                least_recent_account = account
-                least_recent_timestamp = pos['timestamp']
-                notes = "connected to frontend"
     # refresh cache of single policy at a time
     get_balances({'account': least_recent_account, 'chains': [1,137]}, max_cache_age=0)
     #sns_publish(f"in risk data zapper cache. refreshing {least_recent_account}\n{notes}")
