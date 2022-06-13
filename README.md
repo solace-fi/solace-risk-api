@@ -1,4 +1,4 @@
-# solace-risk-data
+# solace-risk-api
 
 ### development and deployment
 
