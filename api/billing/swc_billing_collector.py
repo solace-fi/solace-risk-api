@@ -50,7 +50,8 @@ def collect_premiums():
             if len(swc_premiums) == 0:
                 print(f"No premium is found for chain {chain_id}")
                 continue
-
+            
+            paid_accounts = []
             print("\nPaying with rewards =========================================================================================>>")
             # first pay with policyholders's rewards
             for swc_premium in swc_premiums:
@@ -75,7 +76,7 @@ def collect_premiums():
                         # pay with all rewards
                         current_used_reward = used_rewards + current_premium
                         swc_premium["premium"] = 0
-                        post_premium_charged(chain_id, account, get_timestamp())
+                        paid_accounts.append(account)
                         print(f"Premium paid with rewards. User: {account}, Premium: {current_premium}, Rewards(Used): {current_premium}")
                     else:
                         # pay with partial rewards
@@ -132,14 +133,13 @@ def collect_premiums():
 
                 # save results
                 if tx_receipt["status"] == 1:
-                    timestamp = get_timestamp()
-                    for i in range(len(premiums)):
-                        print(f"Premium charged for account: {policyholders[i]}. Premium(USD): {premiums[i]/10**18}")
-                        post_premium_charged(chain_id, policyholders[i], timestamp)
+                    paid_accounts = paid_accounts + policyholders
                     print(f"Transaction for charging premiums for chain {chain_id} was successful. Tx hash: {tx_hash}")
                 else:
                     print(f"Transaction for charging premium for chain {chain_id} was unsuccesful. Tx hash: {tx_hash}")
-
+            # save results
+            save_premiums_charged(chain_id, paid_accounts)
+           
             print("\Setting premium charged time =============================================================================================>>")
             # create set latest charged time tx
             charged_time = int(datetime.now().timestamp())

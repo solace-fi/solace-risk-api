@@ -4,6 +4,23 @@ from api.utils import *
 #    HELPER FUNCTIONS
 #-----------------------------------------------------
 
+def save_premiums_charged(chain: str, accounts: list):
+    try:
+        timestamp = get_timestamp()
+        billings = get_swc_billing_data_from_s3(chain)
+        for account in accounts:
+            if account not in billings:
+                continue
+            for billing_by_account in billings[account]:
+                if billing_by_account["charged"] == False:
+                    billing_by_account["charged"] = True
+                    billing_by_account["charged_time"] = timestamp
+        save_billings_data_to_s3(chain, billings)
+        return True
+    except Exception as e:
+        handle_error({"resource": "billing.helpers.save_premiums_charged()"}, e, 500)
+        return False
+
 def post_premium_charged(chain_id: str, account: str, timestamp: str):
     try:
         billings = get_swc_billing_data_from_s3(chain_id)
