@@ -9,12 +9,17 @@ SPLIT_NUMBER = 100
 
 LAMBDA_FUNCTION_NAME_MAP = {
     '1':   "SolaceRiskDataMainnetScoreTrackerFunction",
-    '137': "SolaceRiskDataPolygonScoreTrackerFunction"
+    '137': "SolaceRiskDataPolygonScoreTrackerFunction",
+    '205': "SolaceRiskDataFantomScoreTrackerFunction",
+    '1313161554': "SolaceRiskDataAuroraScoreTrackerFunction",
+
 }
 
 CODE_MAP = {
     '1': "mainnet",
-    '137': "polygon"
+    '137': "polygon",
+    '205': "fantom",
+    '1313161554': "aurora"
 }
 
 # aws clients
@@ -36,8 +41,13 @@ def get_code(chain):
         filename = 'polygon.zip'
     elif CODE_MAP[chain] == 'mainnet':
         filename = 'mainnet.zip'
+    elif CODE_MAP[chain] == 'fantom':
+        filename = 'fantom.zip'
+    elif CODE_MAP[chain] == 'aurora':
+        filename = 'aurora.zip'
     else:
         raise Exception(f"Unsupported network name for chain {chain}")
+
     print(S3_SCORE_TRACKER_CODE_FOLDER + "/" + filename)
     code = s3_get_zip(S3_SCORE_TRACKER_CODE_FOLDER + "/" + filename, cache=True)
     return code
@@ -54,8 +64,7 @@ def get_tracker_lambda_function_count(chain):
 def get_scaling_info():
     contracts = get_swc_contracts()
     policy_counts = dict()
-    for contract in contracts:
-        chain = contract["chain"]
+    for chain, contract in contracts.items():
         if chain not in policy_counts:
             policy_counts[chain] = 0
         policy_counts[chain] += contract["instance"].functions.policyCount().call()
@@ -114,7 +123,3 @@ def main(event, context):
         print(f"Rate tracker scaler finished ")
     except Exception as e:
         return handle_error(event, e, 500)
-
-
-if __name__ == '__main__':
-  main(None, None)

@@ -26,7 +26,7 @@ def verify_params(params):
 
 # fetches the positions of an account from zapper
 def fetch_positions(params):
-    url = f"https://api.zapper.fi/v2/balances?api_key={ZAPPER_API_KEY}&addresses[]={params['account']}"
+    url = f"https://api.zapper.fi/v2/balances?api_key={ZAPPER_API_KEY}&addresses[]={params['account']}&useNewBalancesFormat=true"
     for i in range(1):
         try:
             response = requests.get(url, timeout=600)
@@ -42,13 +42,17 @@ def fetch_positions(params):
 def parse_positions(position_txt):
     try:
         positions = []
-        matches = re.findall("event: protocol\ndata: {*.*}", position_txt)
+        matches = re.findall("event: balance\ndata: {*.*}", position_txt)
         for match in matches:
             index = match.find('{')
             index2 = match.rfind('}')
             if index == -1 or index2 == -1:
                 break
             position = json.loads(match[index:index2+1])
+            # filter out nfts and tokens
+            if position["appId"] == "tokens" or position["appId"] == "nft":
+                continue
+
             positions.append(position)
         return positions
     except Exception as e:
@@ -63,11 +67,9 @@ def clean_positions(positions):
             # filter out zero balance positions
             if len(position["data"]) == 0:
                 continue
-            # filter out nfts and tokens
-            if position["appId"] == "tokens" or position["appId"] == "nft":
-                continue
+           
             # flatten
-            balanceUSD = position["meta"]["total"]
+            balanceUSD = position["balanceUSD"]
             if balanceUSD == 0:
                  continue
             # don't change the order

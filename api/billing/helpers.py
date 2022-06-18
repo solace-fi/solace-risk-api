@@ -6,12 +6,12 @@ from api.utils import *
 
 def post_premium_charged(chain_id: str, account: str, timestamp: str):
     try:
-        billings = get_soteria_billings(chain_id)
+        billings = get_swc_billing_data_from_s3(chain_id)
         for billing_by_account in billings[account]:
             if billing_by_account["charged"] == False:
                 billing_by_account["charged"] = True
                 billing_by_account["charged_time"] = timestamp
-        save_billings(chain_id, billings)
+        save_billings_data_to_s3(chain_id, billings)
         return True
     except Exception as e:
         handle_error({"resource": "billing.helpers.post_premium_charged()"}, e, 500)
@@ -19,7 +19,7 @@ def post_premium_charged(chain_id: str, account: str, timestamp: str):
 
 def get_all_billings(chain_id: str):
     try:
-        billings = get_soteria_billings(chain_id)
+        billings = get_swc_billing_data_from_s3(chain_id)
         result = []
         for account, account_billings in billings.items():
             for account_billing in account_billings:
@@ -56,6 +56,26 @@ def get_unpaid_billings(chain_id: str):
         return unpaid_billings
     except Exception as e:
         handle_error({"resource": "billing.helpers.get_unpaid_billings()"}, e, 500)
+        return None
+
+def get_unpaid_premiums(chain_id: str, swc_versions: list):
+    try:
+        billings = get_billings(chain_id)
+        unpaid_billings = []
+        for account, account_billings in billings.items():
+            unpaid_billings.append( {"account": account, "billings": list(filter(lambda billing: billing["charged"] == False and billing["premium"] > 0 and billing["swc_version"] in swc_versions, account_billings )) })
+
+        premiums = []
+        for billing_info in unpaid_billings:
+            premium = 0
+            for account_billing in billing_info["billings"]:
+                premium = premium + account_billing["premium"]
+            
+            if premium > 0:
+                premiums.append({"account": billing_info["account"], "premium": premium})
+        return premiums
+    except Exception as e:
+        handle_error({"resource": "billing.helpers.get_unpaid_premiums()"}, e, 500)
         return None
 
 def get_paid_billings_for_account(chain_id: str, account: str):
@@ -98,7 +118,7 @@ def verify_chain_id(params):
         raise InputException("Chain id must be provided")
 
     chain_id = params["chain_id"]
-    if chain_id not in get_supported_chains():
+    if str(chain_id) not in get_supported_chains():
         raise InputException(f"Chain Id: {chain_id} is not supported yet")
 
 def verify_account(params):
@@ -110,11 +130,11 @@ def verify_charged_amount(params):
         raise InputException("Premium charged amount must be provided")
 
 def get_billings(chain_id: str):
-    billings = get_soteria_billings(chain_id=chain_id)
+    billings = get_swc_billing_data_from_s3(chain_id=chain_id)
     return billings
 
 def get_billings_by_account(chain_id: str, account: str):
-    billings = get_soteria_billings(chain_id)
+    billings = get_swc_billing_data_from_s3(chain_id)
     if account in billings:
         return billings[account]
     return []

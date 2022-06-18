@@ -6,6 +6,14 @@ from math import floor
 import api.balances.get
 get_balances = api.balances.get.get_balances
 
+# trick to use the previous caches
+SWC_MAPPER = {
+    '1': "swcv1",
+    '137': "swcv2",
+    '205': "swcv3",
+    '1313161554': "swcv4"
+}
+
 def track():
     least_recent_account = ""
     least_recent_timestamp = 999999999999
@@ -23,7 +31,7 @@ def track():
     try:
         policies = json.loads(s3_get("policies-cache.json"))
     except Exception as e:
-        policies = {"swcv1":[], "swcv2":[]}
+        policies = {"swcv1":[], "swcv2":[], "swcv3":[], "swcv4":[]}
         policies_updated = True
     try:
         positions = json.loads(s3_get("positions-cache.json"))
@@ -32,9 +40,13 @@ def track():
     # fill any holes in policy and position caches (including new policies)
     swc_contracts = get_swc_contracts()
     # loop across all products
-    for swc in swc_contracts:
+    for chain, swc in swc_contracts.items():
         policy_count = swc["instance"].functions.policyCount().call()
-        swc_version = "swcv" + str(swc['version'])
+
+        # TODO: this is a TRICK to use previous swcv1 and swcv2  mapped caches
+        if chain not in SWC_MAPPER:
+            continue
+        swc_version = SWC_MAPPER[chain]
 
         # loop across policies
         for policyID in range(1, policy_count+1):
@@ -90,6 +102,3 @@ def handler(event, context):
         return handle_error(event, e, 400)
     except Exception as e:
         return handle_error(event, e, 500)
-
-if __name__ == "__main__":
-    handler(None, None)
