@@ -19,8 +19,8 @@ import asn1tools
 
 DATA_BUCKET = os.environ.get("DATA_BUCKET", "risk-data.solace.fi.data")
 DEAD_LETTER_TOPIC = os.environ.get("DEAD_LETTER_TOPIC", "arn:aws:sns:us-west-2:151427405638:RiskDataDeadLetterQueue")
-S3_SOTERIA_SCORES_FOLDER = 'soteria-scores/TEST/'
-S3_SOTERIA_PROCESSED_SCORES_FOLDER = 'soteria-processed-scores/TEST/'
+S3_SOTERIA_SCORES_FOLDER = 'soteria-scores/'
+S3_SOTERIA_PROCESSED_SCORES_FOLDER = 'soteria-processed-scores/'
 S3_BILLINGS_FOLDER = 'soteria-billings/'
 S3_BILLINGS_FILE = 'billings.json'
 S3_BILLING_ERRORS_FILE = 'billing_errors.json'
