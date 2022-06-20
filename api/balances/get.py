@@ -34,7 +34,7 @@ def fetch_from_zapper(params):
 
 # makes the http call to zapper api
 def call_to_zapper(params):
-    url = f"https://api.zapper.fi/v1/balances-v3?api_key={ZAPPER_API_KEY}&addresses[]={params['account']}"
+    url = f"https://api.zapper.fi/v2/balances?api_key={ZAPPER_API_KEY}&addresses[]={params['account']}&useNewBalancesFormat=true"
     for i in range(1):
         try:
             response = requests.get(url, timeout=600)
@@ -72,7 +72,7 @@ def parse_zapper_response(position_txt):
 # removes unnecessary info
 def parse_zapper_events(zapper_events):
     # TODO: what about the other event types?
-    accepted_events = list(filter(lambda event: event['event'] == 'event: protocol', zapper_events))
+    accepted_events = list(filter(lambda event: event['event'] == 'event: balance', zapper_events))
     positions = list(map(lambda event: event['data'], accepted_events))
     try:
         results = []

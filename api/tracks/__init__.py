@@ -29,7 +29,7 @@ class BaseRateTracker:
         policies = []
 
         if self.contract:
-            policy_count = self.contract.functions.policyCount().call(block_identifier=block_number)
+            policy_count = self.contract.functions.totalSupply().call(block_identifier=block_number)
             start_index = (self.tracker_id - 1) * 100 + 1
             end_index = (self.tracker_id * 100) + 1
 
