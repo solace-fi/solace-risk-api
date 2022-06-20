@@ -74,7 +74,7 @@ def sign(premium, policyholder, chainID):
             print(f"Valid: {isValid}")
         except Exception as e:
             print(e)
-            break
+            continue
 
     return {"premium_usd": premium, "premium": premium_normalized, "policyholder": policyholder,  "deadline": deadline,  "signature": signature}
 
