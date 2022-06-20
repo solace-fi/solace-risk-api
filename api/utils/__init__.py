@@ -8,6 +8,7 @@ import sys
 from datetime import datetime
 from calendar import monthcalendar
 import requests
+import time
 
 import web3
 Web3 = web3.Web3
@@ -51,7 +52,19 @@ def s3_get_zip(key, cache=False):
         return res
 
 def s3_put(key, body):
-    s3_client.put_object(Bucket=DATA_BUCKET, Body=body, Key=key)
+    # TODO: figure out why we're getting this notification
+    # An error occurred (SlowDown) when calling the PutObject operation (reached max retries: 4): Please reduce your request rate.
+    # adding retries is just a patch on what is likely an optimization issue
+    err = ""
+    for i in range(5):
+        try:
+            s3_client.put_object(Bucket=DATA_BUCKET, Body=body, Key=key)
+            return
+        except Exception as e:
+            err = e
+            time.sleep(1)
+    if err != "":
+        raise err
 
 def s3_move(key: str, new_key: str):
     copy_source = {'Bucket': DATA_BUCKET, 'Key': key}
@@ -67,7 +80,7 @@ def s3_get_files(folder):
         for content in contents:
             files.append(content['Key'])
     return files
-    
+
 def sns_publish(message):
     sns_client.publish(
         TopicArn=DEAD_LETTER_TOPIC,
