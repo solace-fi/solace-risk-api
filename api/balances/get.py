@@ -16,11 +16,6 @@ def verify_params(params):
         else:
             raise InputException(f"Bad request. Chain info is not provided")
     try:
-        cfg = get_config("1")
-        addr = cfg['w3'].toChecksumAddress(params["account"])
-        if not cfg['w3'].isAddress(addr):
-            raise InputException(f"Bad request. Invalid address for {params['account']}")
-        params["account"] = addr
         networks = get_networks(params['chains'])
         if networks is None:
             raise InputException(f"Bad request. Network names are not found for chains: {params['chains']}")
@@ -39,7 +34,7 @@ def fetch_from_zapper(params):
 
 # makes the http call to zapper api
 def call_to_zapper(params):
-    url = f"https://api.zapper.fi/v1/balances-v3?api_key={ZAPPER_API_KEY}&addresses[]={params['account']}"
+    url = f"https://api.zapper.fi/v2/balances?api_key={ZAPPER_API_KEY}&addresses[]={params['account']}&useNewBalancesFormat=true"
     for i in range(1):
         try:
             response = requests.get(url, timeout=600)
@@ -77,7 +72,7 @@ def parse_zapper_response(position_txt):
 # removes unnecessary info
 def parse_zapper_events(zapper_events):
     # TODO: what about the other event types?
-    accepted_events = list(filter(lambda event: event['event'] == 'event: protocol', zapper_events))
+    accepted_events = list(filter(lambda event: event['event'] == 'event: balance', zapper_events))
     positions = list(map(lambda event: event['data'], accepted_events))
     try:
         results = []
@@ -86,11 +81,9 @@ def parse_zapper_events(zapper_events):
             # filter out zero balance positions
             if len(position["data"]) == 0:
                 continue
-            # filter out nfts and tokens
-            if position["appId"] == "tokens" or position["appId"] == "nft":
-                continue
+           
             # flatten
-            balanceUSD = position["meta"]["total"]
+            balanceUSD = position["balanceUSD"]
             if balanceUSD == 0:
                  continue
             # don't change the order

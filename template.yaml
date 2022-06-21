@@ -130,11 +130,11 @@ Resources:
             Path: /series
             Method: get
             RestApiId: !Ref RestApi
-  SoteriaScoreTrackerFunction:
+  MainnetScoreTrackerFunction:
     Type: AWS::Serverless::Function
     Properties:
-      FunctionName: SolaceRiskDataTrackScoresFunction
-      Handler: api/tracks/soteria_rate_tracker.main
+      FunctionName: SolaceRiskDataMainnetScoreTrackerFunction1
+      Handler: api/tracks/mainnet.main
       Runtime: python3.8
       MemorySize: 1024
       Timeout: 900
@@ -144,6 +144,62 @@ Resources:
           Type: Schedule
           Properties:
             Schedule: rate(60 minutes)
+  PolygonScoreTrackerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataPolygonScoreTrackerFunction1
+      Handler: api/tracks/polygon.main
+      Runtime: python3.8
+      MemorySize: 1024
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(60 minutes)
+  FantomScoreTrackerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataFantomScoreTrackerFunction1
+      Handler: api/tracks/fantom.main
+      Runtime: python3.8
+      MemorySize: 1024
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(60 minutes)
+  AuroraScoreTrackerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataAuroraScoreTrackerFunction1
+      Handler: api/tracks/aurora.main
+      Runtime: python3.8
+      MemorySize: 1024
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(60 minutes)
+  ScoreTrackerScalerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataScoreTrackerScalerFunction
+      Handler: api/tracks/scaler.main
+      Runtime: python3.8
+      MemorySize: 1024
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(10 minutes)
   GetSoteriaScoreTracksFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -164,7 +220,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: SolaceRiskDataSoteriaBillingFunction
-      Handler: api/billing/soteria_billing_calculator.main
+      Handler: api/billing/swc_billing_calculator.main
       Runtime: python3.8
       MemorySize: 1024
       Timeout: 600
@@ -178,7 +234,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       FunctionName: SolaceRiskDataSoteriaBillingCollector
-      Handler: api/billing/soteria_billing_collector.main
+      Handler: api/billing/swc_billing_collector.main
       Runtime: python3.8
       MemorySize: 1024
       Timeout: 600
@@ -284,22 +340,87 @@ Resources:
               Path: /price-history
               Method: get
               RestApiId: !Ref RestApi
-  #GetVolatilityFunction:
-  #    Type: AWS::Serverless::Function
-  #    Properties:
-  #      FunctionName: SolaceRiskDataGetVolatilityFunction
-  #      Handler: api/volatility/get.handler
-  #      Runtime: python3.8
-  #      MemorySize: 128
-  #      Timeout: 600
-  #      Role: !GetAtt LambdaExecutionRole.Arn
-  #      Events:
-  #        GetEvent:
-  #          Type: Api
-  #          Properties:
-  #            Path: /volatility
-  #            Method: get
-  #            RestApiId: !Ref RestApi
+  GetPremiumDataFunction:
+      Type: AWS::Serverless::Function
+      Properties:
+        FunctionName: SolaceRiskDataGetPremiumDataFunction
+        Handler: api/cancel/get.handler
+        Runtime: python3.8
+        MemorySize: 128
+        Timeout: 600
+        Role: !GetAtt LambdaExecutionRole.Arn
+        Events:
+          GetEvent:
+            Type: Api
+            Properties:
+              Path: /premium-data
+              Method: get
+              RestApiId: !Ref RestApi
+  RewardsInfoDataFunction:
+      Type: AWS::Serverless::Function
+      Properties:
+        FunctionName: SolaceRiskDataReferralInfoFunction
+        Handler: api/referral/handler.handler
+        Runtime: python3.8
+        MemorySize: 128
+        Timeout: 600
+        Role: !GetAtt LambdaExecutionRole.Arn
+        Events:
+          GetEvent:
+            Type: Api
+            Properties:
+              Path: /rewards-info
+              Method: get
+              RestApiId: !Ref RestApi
+  ApplyPromoCodeDataFunction:
+      Type: AWS::Serverless::Function
+      Properties:
+        FunctionName: SolaceRiskDataApplyPromoCodeFunction
+        Handler: api/referral/handler.handler
+        Runtime: python3.8
+        MemorySize: 128
+        Timeout: 600
+        Role: !GetAtt LambdaExecutionRole.Arn
+        Events:
+          GetEvent:
+            Type: Api
+            Properties:
+              Path: /promo-codes/apply
+              Method: post
+              RestApiId: !Ref RestApi
+  ApplyReferralCodeDataFunction:
+      Type: AWS::Serverless::Function
+      Properties:
+        FunctionName: SolaceRiskDataApplyReferralCodeFunction
+        Handler: api/referral/handler.handler
+        Runtime: python3.8
+        MemorySize: 128
+        Timeout: 600
+        Role: !GetAtt LambdaExecutionRole.Arn
+        Events:
+          GetEvent:
+            Type: Api
+            Properties:
+              Path: /referral-codes/apply
+              Method: post
+              RestApiId: !Ref RestApi
+  CreateReferralCodeDataFunction:
+      Type: AWS::Serverless::Function
+      Properties:
+        FunctionName: SolaceRiskDataApplyReferralCodeFunction
+        Handler: api/referral/handler.handler
+        Runtime: python3.8
+        MemorySize: 128
+        Timeout: 600
+        Role: !GetAtt LambdaExecutionRole.Arn
+        Events:
+          GetEvent:
+            Type: Api
+            Properties:
+              Path: /referral-codes
+              Method: post
+              RestApiId: !Ref RestApi
+
   # Data Bucket
   DataBucket:
     Type: AWS::S3::Bucket

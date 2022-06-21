@@ -6,6 +6,14 @@ from math import floor
 import api.balances.get
 get_balances = api.balances.get.get_balances
 
+# trick to use the previous caches
+SWC_MAPPER = {
+    '1': "swcv1",
+    '137': "swcv2",
+    '205': "swcv3",
+    '1313161554': "swcv4"
+}
+
 def track():
     least_recent_account = ""
     least_recent_timestamp = 999999999999
@@ -13,8 +21,8 @@ def track():
     now = floor(datetime.now().timestamp())
     policies_updated = False
     policyholders = set()
-    cfg1 = get_config("1")
-    cfg137 = get_config("137")
+    supported_chains = get_supported_chains()
+
     # read cache
     try:
         latest_connect = json.loads(s3_get("latest-connect.json"))
@@ -23,51 +31,59 @@ def track():
     try:
         policies = json.loads(s3_get("policies-cache.json"))
     except Exception as e:
-        policies = {"swcv1":[], "swcv2":[]}
+        policies = {"swcv1":[], "swcv2":[], "swcv3":[], "swcv4":[]}
         policies_updated = True
     try:
         positions = json.loads(s3_get("positions-cache.json"))
     except Exception as e:
         positions = {}
     # fill any holes in policy and position caches (including new policies)
-    soteriaContracts = {"swcv1": cfg1['soteriaContract'], "swcv2": cfg137['soteriaContract']}
+    swc_contracts = get_swc_contracts()
     # loop across all products
-    for swcv in ["swcv1", "swcv2"]:
-        policy_count = soteriaContracts[swcv].functions.policyCount().call()
+    for chain, swc in swc_contracts.items():
+        policy_count = swc["instance"].functions.policyCount().call()
+
+        # TODO: this is a TRICK to use previous swcv1 and swcv2  mapped caches
+        if chain not in SWC_MAPPER:
+            continue
+        swc_version = SWC_MAPPER[chain]
+
         # loop across policies
         for policyID in range(1, policy_count+1):
             # fill holes in policy cache
-            query = list(filter(lambda policy: policy['policyID'] == policyID, policies[swcv]))
+            query = list(filter(lambda policy: policy['policyID'] == policyID, policies[swc_version]))
             if len(query) == 0:
                 policies_updated = True
-                policyholder = soteriaContracts[swcv].functions.ownerOf(policyID).call()
-                policies[swcv].append({'policyID': policyID, 'policyholder': policyholder})
+                policyholder = swc["instance"].functions.ownerOf(policyID).call()
+                policies[swc_version].append({'policyID': policyID, 'policyholder': policyholder})
                 policyholders.add(policyholder)
+                #sns_publish(f"in risk data zapper cache. new policy detected\nproduct: {swcv}\npolicyID: {policyID}\npolicyholder: {policyholder}")
+                #print(f"in risk data zapper cache. new policy detected\nproduct: {swcv}\npolicyID: {policyID}\npolicyholder: {policyholder}")
             else:
                 policyholder = query[0]['policyholder']
             # fill holes in position cache
             if policyholder not in positions:
                 #print(f"caching {policyholder}")
-                get_balances({'account': policyholder, 'chains': [1,137]})
+                get_balances({'account': policyholder, 'chains': supported_chains})
             else:
                 pos = positions[policyholder]
                 if pos['timestamp'] < least_recent_timestamp:
                     least_recent_account = policyholder
                     least_recent_timestamp = pos['timestamp']
-                    notes = f"holds {swcv} policyID {policyID}"
+                    notes = f"holds {swc_version} policyID {policyID}"
     # also maintain wallets that connected to frontend within last week
     for account in latest_connect:
-        if account in policyholders: # dedup policyholders
+        if account in policyholders:
             continue
         if account in positions:
             pos = positions[account]
             age = now - latest_connect[account]
             if age < 604800 and pos['timestamp'] < least_recent_timestamp:
                 least_recent_account = account
-                least_recent_timestamp = pos['timestamp']
+                least_recent_timestamp =  pos['timestamp']
                 notes = "connected to frontend"
     # refresh cache of single policy at a time
-    get_balances({'account': least_recent_account, 'chains': [1,137]}, max_cache_age=0)
+    get_balances({'account': least_recent_account, 'chains': supported_chains}, max_cache_age=0)
     #sns_publish(f"in risk data zapper cache. refreshing {least_recent_account}\n{notes}")
     print(f"in risk data zapper cache. refreshing {least_recent_account}\n{notes}")
     # record policies to cache

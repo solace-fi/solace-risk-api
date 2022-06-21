@@ -1,4 +1,6 @@
 import asyncio
+
+from api.billing.helpers import get_premium_for_account
 from api.utils import *
 import json
 import pandas as pd
@@ -42,9 +44,7 @@ def flatten_nested_json_df(df):
         dict_columns = s[s].index.tolist()
     return df
 
-
-async def calculate_bill(score_file: str, policyholder: str):
-    try:
+def _calculate_bill(score_file: str, policyholder: str):
         print(f"Calculating premium for policyholder: {policyholder}. Score file: {score_file}")
         scores = json.loads(s3_get(score_file))
 
@@ -78,6 +78,10 @@ async def calculate_bill(score_file: str, policyholder: str):
         total_due = sub2['trueUpPremium'].sum()
         timestamp = sub2['timeStamp'].iloc[-1]
         return {"timestamp": str(timestamp), "premium": total_due, "created_time": get_timestamp(), "charged": False, "charged_time": ""}, policyholder, score_file
+
+async def calculate_bill(score_file: str, policyholder: np.str0):
+    try:
+        return _calculate_bill(score_file, policyholder)
     except Exception as e:
         return None, policyholder, score_file
 
@@ -91,16 +95,17 @@ async def archive_score_file(score_file: str, chain_id: str):
 
 async def calculate_bills():
     for chain_id in get_supported_chains():
+        chain_id = str(chain_id)
         print(f"Calculating soteria billings for chain {chain_id} has been started....")
         try:
-            billings = get_soteria_billings(chain_id=chain_id)
-            billing_errors = get_billing_errors(chain_id=chain_id)
-            score_files = get_soteria_score_files(chain_id=chain_id)
+            billings = get_swc_billing_data_from_s3(chain_id=chain_id)
+            billing_errors = get_swc_billing_error_data_from_s3(chain_id=chain_id)
+            score_files = get_swc_score_files_from_s3(chain_id=chain_id)
           
             if len(score_files) == 0:
                 print(f"No score file is found for chain {chain_id}")
                 continue
-
+           
             tasks = []
             for score_file in score_files:
                 policyholder = get_file_name(score_file)
@@ -135,14 +140,38 @@ async def calculate_bills():
                 await archive_score_file(score_file, chain_id)
             
             # save results
-            save_billings(chainId=chain_id, billings=billings)
-            save_billing_errors(chainId=chain_id, billing_errors=billing_errors)
+            save_billings_data_to_s3(chainId=chain_id, billings=billings)
+            save_billing_error_data_s3(chainId=chain_id, billing_errors=billing_errors)
             print(f"Calculating soteria billings for chain {chain_id} has been finished.")
         except Exception as e:
             print(f"Error occurred while calculating bills: Error: {e}")
 
-def main(event, context):
-    asyncio.run(calculate_bills())
 
-if __name__ == '__main__':
-    main(None, None)
+def calculate_single_bill(chain: str, policyholder: str):
+    try:
+        premium = 0
+        score_file = S3_SOTERIA_SCORES_FOLDER + chain + "/" + policyholder + ".json"
+        result1 = get_premium_for_account(chain_id=chain, account=policyholder)
+        premium += result1["premium"]
+        try:
+            result2, _ ,_ = _calculate_bill(score_file, policyholder)
+            premium += result2["premium"]
+        except Exception as e:
+            print(e)
+            pass
+        print(premium)
+        return premium
+    except Exception as e:
+        print(f"Error occurred while calculating premium for {policyholder}. Error {e}")
+        return None
+
+
+def main(event, context):
+    try:
+        asyncio.run(calculate_bills())
+        return {
+            "statusCode": 200,
+            "headers": headers
+        }
+    except Exception as e:
+        return handle_error(event, e, 500)

@@ -43,6 +43,14 @@ def s3_get(key, cache=False):
         s3_cache[key] = res
         return res
 
+def s3_get_zip(key, cache=False):
+    if cache and key in s3_cache:
+        return s3_cache[key]
+    else:
+        res = s3_client.get_object(Bucket=DATA_BUCKET, Key=key)["Body"].read()
+        s3_cache[key] = res
+        return res
+
 def s3_put(key, body):
     # TODO: figure out why we're getting this notification
     # An error occurred (SlowDown) when calling the PutObject operation (reached max retries: 4): Please reduce your request rate.
@@ -125,8 +133,12 @@ def get_timestamp():
 
 def handle_error(event, e, statusCode):
     print(e)
-    resource = event["resource"] if "resource" in event else ".unknown()"
-    queryStringParameters = event["queryStringParameters"] if "queryStringParameters" in event else ""
+
+    queryStringParameters = ""
+    resource = ".unknown()"
+    if event is not None:
+        resource = event["resource"]
+        queryStringParameters = event["queryStringParameters"] if "queryStringParameters" in event else ""
     sns_message = "The following {} error occurred in solace-risk-data{}:\n{}\n{}".format(statusCode, resource, queryStringParameters, stringify_error(e))
     sns_publish(sns_message)
     http_message = str(e)
@@ -143,7 +155,7 @@ headers = {
     "Access-Control-Allow-Methods": "OPTIONS,GET,POST,PUT,DELETE"
 }
 
-alchemy_config = json.loads(s3_get("alchemy_config.json", cache=True))
+provider_config = json.loads(s3_get("provider_config.json", cache=True))
 
 class InputException(Exception):
     pass
@@ -153,47 +165,28 @@ ADDRESS_SIZE = 40 # 20 bytes or 40 hex chars
 ZERO_ADDRESS = "0x0000000000000000000000000000000000000000"
 SOLACE_ADDRESS = "0x501acE9c35E60f03A2af4d484f49F9B1EFde9f40"
 xSOLACE_ADDRESS = "0x501AcE5aC3Af20F49D53242B6D208f3B91cfc411"
+SCP_ADDRESS = "0x501ACE72166956F57b44dbBcc531A8E741449997"
 erc20Json = json.loads(s3_get("abi/other/ERC20.json", cache=True))
+scpJson = json.loads(s3_get("abi/scp/SCP.json", cache=True))
 ONE_ETHER = 1000000000000000000
 
 # chainId => network
-NETWORKS = {1: 'ethereum', 137: 'polygon'}
-config_s3 = json.loads(s3_get('config2.json', cache=True))
+NETWORKS = {1: 'ethereum', 137: 'polygon', 250: 'fantom', 1313161554: 'aurora', 4: 'ethereum'}
+swc_configs = json.loads(s3_get('swc_configs.json', cache=True))
+referral_configs = json.loads(s3_get('referral_config.json', cache=True))
 ZAPPER_API_KEY = s3_get('zapper.json', cache=True)
 COVALENT_API_KEY = s3_get('covalent.json', cache=True)
 
 def get_supported_chains():
-    return config_s3['supported_chains']
+    supported_chains = []
+    for chain in swc_configs['supported_chains']:
+        supported_chains.append(int(chain))
+    return supported_chains
 
 def get_billing_chains():
-    if 'billing_chains' in config_s3:
-        return config_s3['billing_chains']
+    if 'billing_chains' in swc_configs:
+        return swc_configs['billing_chains']
     return []
-
-def get_config(chain_id: str):
-    if chain_id in get_supported_chains():
-        if chain_id == "1":
-            cfg = config_s3[chain_id]
-            w3 = Web3(Web3.HTTPProvider(alchemy_config["1"]))
-            cfg["w3"] = w3
-            if len(cfg['soteria']) > 0:
-                soteria_json = json.loads(s3_get('abi/soteria/SolaceCoverProduct.json', cache=True))
-                soteriaContract = w3.eth.contract(address=cfg["soteria"], abi=soteria_json["abi"])
-                cfg["soteriaContract"] = soteriaContract
-            return cfg
-        elif chain_id == "137":
-            cfg = config_s3[chain_id]
-            w3 = Web3(Web3.HTTPProvider(alchemy_config["137"]))
-            cfg["w3"] = w3
-            if len(cfg['soteria']) > 0:
-                soteria_json = json.loads(s3_get('abi/soteria/SolaceCoverProductV2.json', cache=True))
-                soteriaContract = w3.eth.contract(address=cfg["soteria"], abi=soteria_json["abi"])
-                cfg["soteriaContract"] = soteriaContract
-            return cfg
-        else:
-            return None
-    else:
-        return None
 
 def get_premium_collector(chain_id: str):
     if chain_id in get_supported_chains():
@@ -205,13 +198,13 @@ def get_premium_collector(chain_id: str):
 def get_networks(chains: list) -> list:
     networks = []
     for chain in chains:
-        if chain in NETWORKS:
-           networks.append(NETWORKS[chain])
+        if int(chain) in NETWORKS:
+            networks.append(NETWORKS[int(chain)])
     if len(networks) == 0:
         return None
     return networks
 
-def get_soteria_billings(chain_id: str) -> dict:
+def get_swc_billing_data_from_s3(chain_id: str) -> dict:
     try:
         billings = json.loads(s3_get(S3_BILLINGS_FOLDER + chain_id + "/" + S3_BILLINGS_FILE))
         return billings
@@ -219,15 +212,15 @@ def get_soteria_billings(chain_id: str) -> dict:
         print(f"No billings file found for chain {chain_id}. Creating new one..")
         return {}
 
-def get_billing_errors(chain_id: str) -> dict:
+def get_swc_billing_error_data_from_s3(chain_id: str) -> dict:
     try:
         billing_errors = json.loads(s3_get(S3_BILLINGS_FOLDER + chain_id + "/" + S3_BILLING_ERRORS_FILE))
         return billing_errors
     except Exception as e:
         print(f"No billings error file found for chain {chain_id}. Creating new one..")
         return {}
-
-def get_soteria_score_files(chain_id: str) -> List:
+      
+def get_swc_score_files_from_s3(chain_id: str) -> List:
     try:
         score_files = s3_get_files(S3_SOTERIA_SCORES_FOLDER + chain_id + "/")
         if score_files:
@@ -236,8 +229,9 @@ def get_soteria_score_files(chain_id: str) -> List:
     except Exception as e:
         print(e)
         return []
+    
 
-def get_soteria_score_file(chain_id: str, account: str):
+def get_swc_score_file_from_s3(chain_id: str, account: str):
     try:
         score_file = s3_get(S3_SOTERIA_SCORES_FOLDER + chain_id + "/" + account + ".json", cache=True)
         return score_file
@@ -245,7 +239,7 @@ def get_soteria_score_file(chain_id: str, account: str):
         print(e)
         return {}
 
-def save_billings(chainId: str, billings: dict) -> bool:
+def save_billings_data_to_s3(chainId: str, billings: dict) -> bool:
     try:
         s3_put(S3_BILLINGS_FOLDER + chainId + "/" + S3_BILLINGS_FILE, json.dumps(billings))
         return True
@@ -253,7 +247,7 @@ def save_billings(chainId: str, billings: dict) -> bool:
         handle_error({"resource": "utils.save_billings()"}, e, 500)
         return False
 
-def save_billing_errors(chainId: str, billing_errors: dict) -> bool:
+def save_billing_error_data_s3(chainId: str, billing_errors: dict) -> bool:
     try:
         s3_put(S3_BILLINGS_FOLDER + chainId + "/" + S3_BILLING_ERRORS_FILE, json.dumps(billing_errors))
         return True
@@ -261,22 +255,44 @@ def save_billing_errors(chainId: str, billing_errors: dict) -> bool:
         handle_error({"resource": "utils.save_billing_errors()"}, e, 500)
         return False
 
-def get_soteria_policies(chainId: str) -> list:
-    cfg = get_config(chainId)
-    if cfg is None:
-        raise InputException(f"Bad request. Not found config for the chain id: {chainId}")
-    block_number = cfg['w3'].eth.block_number
-    policies = []
-    # policy id starts from 1
-    policy_count = cfg['soteriaContract'].functions.policyCount().call(block_identifier=block_number)
-    for policy_id in range(1, policy_count+1):
-        policyholder = cfg['soteriaContract'].functions.ownerOf(policy_id).call(block_identifier=block_number)
-        coverlimit = cfg['soteriaContract'].functions.coverLimitOf(policy_id).call(block_identifier=block_number)
-        # polygon supports multichain positions
-        chains = []
-        if chainId == "137":
-            chains = cfg['soteriaContract'].functions.getPolicyChainInfo(policy_id).call(block_identifier=block_number)
-        else:
-            chains.append(1)
-        policies.append({"address": policyholder, "coverlimit": coverlimit, "chains": chains})
-    return policies
+def get_swc_contracts():
+    # get supported chains
+    if 'supported_chains' not in swc_configs:
+        raise Exception(f"No config found for supported chains")
+    supported_chains = swc_configs['supported_chains']
+
+    contract_info = {}
+    for chain in supported_chains:
+        # web3
+        if chain not in provider_config:
+            raise Exception(f"No web3 config found for chain {chain}")
+        w3 = Web3(Web3.HTTPProvider(provider_config[chain]))
+    
+        # contracts
+        if "contract" not in swc_configs[chain]:
+            raise Exception(f"No contract config found for chain {chain}")
+        
+        contract = swc_configs[chain]["contract"] 
+        if type(contract) != dict:
+            raise Exception(f"No contract config found for chain {chain}")
+    
+        abi = json.loads(s3_get(contract["abi"], cache=True))
+        try:
+            instance = w3.eth.contract(address=contract["address"], abi=abi)
+            contract_info[chain] = { "instance": instance, "web3": w3, "address": contract["address"]}
+        except Exception as e:
+            print(f"Error occured while creating swc contract instance for chain {chain}")
+    return contract_info
+
+
+def get_scp(chain: str):
+    if chain not in get_billing_chains():
+        raise Exception(f"Chain {chain} is not in supported billing chains")
+    
+    if chain not in provider_config:
+        raise Exception(f"No web3 config found for chain {chain}")
+    w3 = Web3(Web3.HTTPProvider(provider_config[chain]))
+    scp = w3.eth.contract(address=SCP_ADDRESS, abi=scpJson)
+    return scp
+
+

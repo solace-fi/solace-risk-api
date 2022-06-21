@@ -2,7 +2,7 @@ from api.utils import *
 
 def get_scores_by_account(chain_id: str, account: str):
     try:
-        score_file = get_soteria_score_file(chain_id, account)
+        score_file = get_swc_score_file_from_s3(chain_id, account)
         if score_file:
             scores = json.loads(score_file)
             return scores
