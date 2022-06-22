@@ -72,25 +72,26 @@ def parse_zapper_response(position_txt):
 # removes unnecessary info
 def parse_zapper_events(zapper_events):
     # TODO: what about the other event types?
-    accepted_events = list(filter(lambda event: event['event'] == 'event: balance', zapper_events))
-    positions = list(map(lambda event: event['data'], accepted_events))
     try:
         results = []
-        for position in positions:
-            position_info = {}
-            # filter out zero balance positions
-            if len(position["data"]) == 0:
+        for event in zapper_events:
+            if event['event'] != 'event: balance' or event['data']['appId'] == "nft" or event['data']['appId'] == "tokens":
                 continue
-           
-            # flatten
-            balanceUSD = position["balanceUSD"]
-            if balanceUSD == 0:
-                 continue
-            # don't change the order
-            position_info["appId"] = position["appId"]
-            position_info["network"] = position["network"]
-            position_info["balanceUSD"] = balanceUSD
-            results.append(position_info)
+
+            for position in event['data']['app']['data']:
+                if position['contractType'] != "contract-position":
+                    continue
+                
+                position_info = {}
+                balanceUSD = position["balanceUSD"]
+                if balanceUSD == 0:
+                    continue
+
+                # don't change the order
+                position_info["appId"] = position["appId"]
+                position_info["network"] = position["network"]
+                position_info["balanceUSD"] = balanceUSD
+                results.append(position_info)
         results = sorted(results, key=lambda event: -event['balanceUSD'])
         return results
     except Exception as e:
@@ -169,3 +170,5 @@ def handler(event, context):
         return handle_error(event, e, 400)
     except Exception as e:
         return handle_error(event, e, 500)
+
+

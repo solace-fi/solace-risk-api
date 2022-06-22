@@ -41,7 +41,7 @@ def track():
     swc_contracts = get_swc_contracts()
     # loop across all products
     for chain, swc in swc_contracts.items():
-        policy_count = swc["instance"].functions.policyCount().call()
+        policy_count = swc["instance"].functions.totalSupply().call()
 
         # TODO: this is a TRICK to use previous swcv1 and swcv2  mapped caches
         if chain not in SWC_MAPPER:
