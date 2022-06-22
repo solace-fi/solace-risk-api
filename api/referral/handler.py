@@ -149,6 +149,3 @@ def handler(event, context):
         return handle_error(event, e, 400)
     except Exception as e:
         return handle_error(event, e, 500)
-
-if __name__ == '__main__':
-    print(update_used_rewards("0x1Ada9Ae98457aD8a2D53DE2B888cd1337d3438E8", float(1)))

@@ -67,7 +67,7 @@ def get_scaling_info():
     for chain, contract in contracts.items():
         if chain not in policy_counts:
             policy_counts[chain] = 0
-        policy_counts[chain] += contract["instance"].functions.policyCount().call()
+        policy_counts[chain] += contract["instance"].functions.totalSupply().call()
 
     scales = []
     for chain, count in policy_counts.items():
