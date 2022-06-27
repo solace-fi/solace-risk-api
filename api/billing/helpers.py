@@ -135,7 +135,7 @@ def verify_chain_id(params):
         raise InputException("Chain id must be provided")
 
     chain_id = params["chain_id"]
-    if str(chain_id) not in get_supported_chains():
+    if int(chain_id) not in get_supported_chains():
         raise InputException(f"Chain Id: {chain_id} is not supported yet")
 
 def verify_account(params):
