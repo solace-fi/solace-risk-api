@@ -189,7 +189,7 @@ def get_billing_chains():
     return []
 
 def get_premium_collector(chain_id: str):
-    if chain_id in get_supported_chains():
+    if int(chain_id) in get_supported_chains():
         signer_key = os.environ.get("PREMIUM_COLLECTOR")
         signer_address = os.environ.get("PREMIUM_COLLECTOR_ADDRESS")
         return signer_key, signer_address
