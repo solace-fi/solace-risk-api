@@ -79,9 +79,6 @@ def parse_zapper_events(zapper_events):
                 continue
 
             for position in event['data']['app']['data']:
-                if position['contractType'] != "contract-position":
-                    continue
-                
                 position_info = {}
                 balanceUSD = position["balanceUSD"]
                 if balanceUSD == 0:
@@ -137,6 +134,8 @@ def get_balances(params, max_cache_age=86400):
     params = verify_params(params)
     try:
         positions_cleaned = fetch_from_s3(params, max_cache_age)
+        if len(positions_cleaned) == 0:
+            positions_cleaned = fetch_from_zapper(params)
     except Exception as e:
         positions_cleaned = fetch_from_zapper(params)
     positions_filtered = filter_positions(positions_cleaned, params["networks"])
@@ -170,5 +169,3 @@ def handler(event, context):
         return handle_error(event, e, 400)
     except Exception as e:
         return handle_error(event, e, 500)
-
-
