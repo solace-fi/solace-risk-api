@@ -158,6 +158,74 @@ Resources:
           Type: Schedule
           Properties:
             Schedule: rate(60 minutes)
+  PolygonScoreTrackerFunction2:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataPolygonScoreTrackerFunction2
+      Handler: api/tracks/polygon.main
+      Runtime: python3.8
+      MemorySize: 1024
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(60 minutes)
+      Environment:
+        Variables:
+          tracker_id: 2
+  PolygonScoreTrackerFunction3:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataPolygonScoreTrackerFunction3
+      Handler: api/tracks/polygon.main
+      Runtime: python3.8
+      MemorySize: 1024
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(60 minutes)
+      Environment:
+        Variables:
+          tracker_id: 3
+  PolygonScoreTrackerFunction4:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataPolygonScoreTrackerFunction4
+      Handler: api/tracks/polygon.main
+      Runtime: python3.8
+      MemorySize: 1024
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(60 minutes)
+      Environment:
+        Variables:
+          tracker_id: 4
+  PolygonScoreTrackerFunction5:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: SolaceRiskDataPolygonScoreTrackerFunction5
+      Handler: api/tracks/polygon.main
+      Runtime: python3.8
+      MemorySize: 1024
+      Timeout: 600
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Events:
+        ScheduledEvent:
+          Type: Schedule
+          Properties:
+            Schedule: rate(60 minutes)
+      Environment:
+        Variables:
+          tracker_id: 5
   FantomScoreTrackerFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -186,20 +254,6 @@ Resources:
           Type: Schedule
           Properties:
             Schedule: rate(60 minutes)
-  # ScoreTrackerScalerFunction:
-  #   Type: AWS::Serverless::Function
-  #   Properties:
-  #     FunctionName: SolaceRiskDataScoreTrackerScalerFunction
-  #     Handler: api/tracks/scaler.main
-  #     Runtime: python3.8
-  #     MemorySize: 1024
-  #     Timeout: 600
-  #     Role: !GetAtt LambdaExecutionRole.Arn
-  #     Events:
-  #       ScheduledEvent:
-  #         Type: Schedule
-  #         Properties:
-  #           Schedule: rate(10 minutes)
   GetSoteriaScoreTracksFunction:
     Type: AWS::Serverless::Function
     Properties:

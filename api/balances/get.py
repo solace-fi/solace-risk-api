@@ -1,4 +1,5 @@
 from api.utils import *
+from itertools import groupby
 import json
 import re
 from datetime import datetime
@@ -116,7 +117,14 @@ def filter_positions(positions, networks):
     if networks is not None:
         positions = list(filter(lambda position: 'network' in position and position['network'] in networks, positions))
     positions = list(sorted(positions, key = lambda pos: f"{pos['network']} {pos['appId']}"))
-    return positions
+
+    def key_func(k):
+        return k['appId'], k['network']
+    filtered_positions = []
+    for key, value in groupby(positions, key_func):
+        balanceUSD = sum(list(map(lambda position: position["balanceUSD"], value)))
+        filtered_positions.append({"appId": key[0], "network": key[1], "balanceUSD": balanceUSD})
+    return filtered_positions
 
 # fetches positions from the s3 cache
 # throws on not cached or not cached recently enough

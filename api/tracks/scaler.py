@@ -58,6 +58,7 @@ def get_tracker_lambda_function_count(chain):
     function_count = 0
     for function in result['Functions']:
         if function['FunctionName'].startswith(function_name):
+            print(f"Function Name ==> {function['FunctionName']}")
             function_count += 1
     return function_count
 
@@ -76,10 +77,13 @@ def get_scaling_info():
        
         function_count = get_tracker_lambda_function_count(chain=chain)
         required_count = math.ceil(count / SPLIT_NUMBER)
+        print(f"Policy Count: {count} Function Count: {function_count} Required Count: {required_count} Chain: {chain}")
         if function_count >= required_count:
             continue
 
-        scales.append({"chain": chain, "id_start": function_count + 1, "id_end": required_count})
+        #scales.append({"chain": chain, "id_start": function_count + 1, "id_end": required_count})
+        scales.append({"chain": chain, "id_start": 4, "id_end": 4})
+
     return scales
 
 def main(event, context):
@@ -122,4 +126,8 @@ def main(event, context):
                 event_client.put_targets(Rule=EVENT_RULE_NAME, Targets=[{'Arn': response['FunctionArn'], 'Id': response['RevisionId']}])
         print(f"Rate tracker scaler finished ")
     except Exception as e:
-        return handle_error(event, e, 500)
+        print(e)
+        #return handle_error(event, e, 500)
+
+if __name__ == '__main__':
+    main(None, None)

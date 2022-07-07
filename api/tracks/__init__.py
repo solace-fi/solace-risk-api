@@ -2,6 +2,8 @@ from api.utils import *
 from api.balances.get import get_balances
 from api.scores.get import get_scores
 
+MAX_SPLIT = 200
+
 class BaseRateTracker:
     def __init__(self, chain: str, tracker_id: int):
         self.chain = chain
@@ -30,8 +32,8 @@ class BaseRateTracker:
 
         if self.contract:
             policy_count = self.contract.functions.totalSupply().call(block_identifier=block_number)
-            start_index = (self.tracker_id - 1) * 100 + 1
-            end_index = (self.tracker_id * 100) + 1
+            start_index = (self.tracker_id - 1) * MAX_SPLIT + 1
+            end_index = (self.tracker_id * MAX_SPLIT) + 1
 
             if policy_count < (end_index-1):
                 end_index = policy_count + 1
