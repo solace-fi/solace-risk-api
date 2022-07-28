@@ -94,17 +94,19 @@ def handle_apply_promo_code(body):
     try:
         response.raise_for_status()
     except:
+        if response.status_code == 404:
+            raise BadRequestException(response.json())
         raise Exception(response.json()) 
     return response.json()
 
 def handle_create_referral_code(body):
     url = f"{URL}referral-codes"
     response = requests.post(url, headers=request_headers, json=body, timeout=600)
-   
-    print(response.json())
     try:
         response.raise_for_status()
     except:
+        if response.status_code == 404:
+            raise BadRequestException(response.json())
         raise Exception(response.json())    
     return response.json()
 
@@ -114,6 +116,8 @@ def handle_apply_referral_code(body):
     try:
         response.raise_for_status()
     except:
+        if response.status_code == 404:
+            raise BadRequestException(response.json())
         raise Exception(response.json())  
     return response.json()
 
@@ -123,7 +127,6 @@ def handler(event, context):
         path = event['path']
         result = {}
        
-        print("Path: ", path)
         # info path
         if method == "GET" and path == REWARDS_INFO:
             result = handle_info(event=event)
@@ -146,6 +149,8 @@ def handler(event, context):
             "headers": headers
         }
     except InputException as e:
-        return handle_error(event, e, 400)
+        return handle_error(event, e, 400, sns_publish=False)
+    except BadRequestException as e:
+        return handle_error(event, e, 400, sns_publish=False)
     except Exception as e:
         return handle_error(event, e, 500)

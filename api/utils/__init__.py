@@ -131,16 +131,17 @@ def get_date_string():
 def get_timestamp():
     return datetime.now().strftime("%Y/%m/%d, %H:%M:%S")
 
-def handle_error(event, e, statusCode):
+def handle_error(event, e, statusCode, sns_publish=True):
     print(e)
+    if sns_publish:
+        queryStringParameters = ""
+        resource = ".unknown()"
+        if event is not None:
+            resource = event["resource"]
+            queryStringParameters = event["queryStringParameters"] if "queryStringParameters" in event else ""
+        sns_message = "The following {} error occurred in solace-risk-data{}:\n{}\n{}".format(statusCode, resource, queryStringParameters, stringify_error(e))
+        sns_publish(sns_message)
 
-    queryStringParameters = ""
-    resource = ".unknown()"
-    if event is not None:
-        resource = event["resource"]
-        queryStringParameters = event["queryStringParameters"] if "queryStringParameters" in event else ""
-    sns_message = "The following {} error occurred in solace-risk-data{}:\n{}\n{}".format(statusCode, resource, queryStringParameters, stringify_error(e))
-    sns_publish(sns_message)
     http_message = str(e)
     return {
         "statusCode": statusCode,
@@ -158,6 +159,9 @@ headers = {
 provider_config = json.loads(s3_get("provider_config.json", cache=True))
 
 class InputException(Exception):
+    pass
+
+class BadRequestException(Exception):
     pass
 
 ETH_ADDRESS = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
