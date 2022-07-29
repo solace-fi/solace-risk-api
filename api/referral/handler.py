@@ -86,6 +86,19 @@ def handle_info(event):
         raise Exception(response.json())    
     return response.json()
 
+def handle_get_referral_code(event):
+    referral_code = get_query_param(event, 'referral_code')
+    if referral_code is None:
+        return InputException("Referral code must be provided")
+    url = f"{URL}referral-codes?referral_code={referral_code}" 
+   
+    response = requests.get(url, headers=request_headers, timeout=600)
+    try:
+        response.raise_for_status()
+    except:
+        raise Exception(response.json())    
+    return response.json()
+
 def handle_apply_promo_code(body):
     validata_post_params(body)
     url = f"{URL}promo-codes/apply"
@@ -137,6 +150,8 @@ def handler(event, context):
         elif method == "POST" and path == REFERRAL_CODES_PATH:
             request_body = json.loads(event['body'])
             result =  handle_create_referral_code(request_body)
+        elif method == "GET" and path == REFERRAL_CODES_PATH:
+            result = handle_get_referral_code(event=event)
         elif method == "POST" and path == APPLIED_REFERRAL_CODES_PATH:
             request_body = json.loads(event['body'])
             result = handle_apply_referral_code(request_body)
