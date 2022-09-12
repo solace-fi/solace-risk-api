@@ -19,6 +19,7 @@ def collect_premiums():
                 continue
             swc =  swc_contracts[chain_id]["instance"]
             w3  =  swc_contracts[chain_id]["web3"]
+            blocknumber = w3.eth.block_number
 
             # get collector
             signer_key, signer_address = get_premium_collector(chain_id)
@@ -29,7 +30,7 @@ def collect_premiums():
             collector_balance = w3.eth.get_balance(signer_address)
             amount = collector_balance / 10**18
             if amount == 0 or (chain_id == "1" and amount < 0.2):
-                message = f"The premium collector {signer_address} has no enough balance to run transactions\nBalance(Wei): {collector_balance}\nBalance(Ether): {amount}"
+                message = f"The premium collector {signer_address} has no enough balance to run transactions.\nChain: {chain_id}\nBalance(Wei): {collector_balance}\nBalance(Ether): {amount}"
                 print(message)
                 sns_publish(message)
                 continue
@@ -38,7 +39,7 @@ def collect_premiums():
             scp = get_scp(chain=chain_id)
 
             # check collector is scp mover
-            is_scp_mover = scp.functions.isScpMover(signer_address).call()
+            is_scp_mover = scp.functions.isScpMover(signer_address).call(block_identifier=blocknumber)
             if not is_scp_mover:
                 raise Exception(f"The premium collector {signer_address} is not SCP mover.")
 
@@ -83,7 +84,7 @@ def collect_premiums():
                         current_used_reward = used_rewards + spendable_rewards
                         swc_premium["premium"] = current_premium - spendable_rewards
                         print(f"Premium partially paid with rewards. User: {account}, Premium: {current_premium}, Rewards(Used): {spendable_rewards}")
-
+                 
                     update_used_rewards(account, float(current_used_reward))
                 except Exception as e:
                     print(f"Error occurred while getting reward infor for user {account}. Premium will be charged as usual.")
@@ -92,11 +93,11 @@ def collect_premiums():
             # filter zero premiums
             swc_premiums = list(filter(lambda swc_premium: swc_premium['premium'] > 0, swc_premiums))
 
-            print("\nChecking will be cannceled policies =========================================================================>>")
+            print("\nChecking will be canceled policies =========================================================================>>")
             # check will be cancelled accounts
             cancel_subscriptions = []
             for premium in swc_premiums:
-                scp_amount = scp.functions.balanceOf(premium["account"]).call() / 10**18
+                scp_amount = scp.functions.balanceOf(premium["account"]).call(block_identifier=blocknumber) / 10**18
                 if scp_amount < premium["premium"]:
                     premium["premium"] = scp_amount
                     cancel_subscriptions.append(premium["account"])
@@ -122,7 +123,12 @@ def collect_premiums():
                 premiums = []
                 for swc_premium in swc_premium_batches:
                     policyholders.append(w3.toChecksumAddress(swc_premium["account"]))
-                    premiums.append(int(swc_premium["premium"] * 10**18))
+                    premium_wei = int(swc_premium["premium"]*10**18)
+                    scp_balance = scp.functions.balanceOf(swc_premium["account"]).call(block_identifier=blocknumber)
+                    if scp_balance < premium_wei:
+                        premiums.append(scp_balance)
+                    else:
+                        premiums.append(premium_wei)
                 # create tx
                 nonce = w3.eth.getTransactionCount(signer_address)
             
@@ -130,44 +136,55 @@ def collect_premiums():
                 tx_signed = w3.eth.account.sign_transaction(tx, private_key=signer_key)
                 tx_hash = w3.eth.send_raw_transaction(tx_signed.rawTransaction)
                 tx_receipt = dict(w3.eth.wait_for_transaction_receipt(tx_hash))
-
+             
                 # save results
                 if tx_receipt["status"] == 1:
                     paid_accounts = paid_accounts + policyholders
                     print(f"Transaction for charging premiums for chain {chain_id} was successful. Tx hash: {tx_hash}")
                 else:
                     print(f"Transaction for charging premium for chain {chain_id} was unsuccesful. Tx hash: {tx_hash}")
+
             # save results
             save_premiums_charged(chain_id, paid_accounts)
            
-            print("\Setting premium charged time =============================================================================================>>")
-            # create set latest charged time tx
-            charged_time = int(datetime.now().timestamp())
-            print(f"Setting charged timestamp {charged_time} for chain {chain_id}")
-            nonce = w3.eth.getTransactionCount(signer_address)
-            tx = swc.functions.setChargedTime(charged_time).buildTransaction({"chainId": int(chain_id), "from": signer_address, "nonce": nonce})
-            tx_signed = w3.eth.account.sign_transaction(tx, private_key=signer_key)
-            tx_hash = w3.eth.send_raw_transaction(tx_signed.rawTransaction)
-            tx_receipt = dict(w3.eth.wait_for_transaction_receipt(tx_hash))
-            if tx_receipt["status"] == 1:
-                print(f"Transaction for setting latest charge time in chain {chain_id} was successful. Tx hash: {tx_hash}")
-            else:
-                print(f"Transaction for setting latest charge time in chain {chain_id} was unsuccessful. Tx hash: {tx_hash}")
+            try:
+                print("\Setting premium charged time =============================================================================================>>")
+                # create set latest charged time tx
+                dt = datetime.now(timezone.utc)
+                charged_time = dt.replace(tzinfo=timezone.utc)
+                charged_time = int(charged_time.timestamp())-10
 
-            print("\nCancelling policies =============================================================================================>>")
-            # create cancel policies tx
-            if len(cancel_subscriptions) > 0:
-                print(f"There is/are {len(cancel_subscriptions)} account to cancel policies. Cancelling them..")
-                print(f"Accounts: {cancel_subscriptions}")
+                print(f"Setting charged timestamp {charged_time} for chain {chain_id}")
                 nonce = w3.eth.getTransactionCount(signer_address)
-                tx = swc.functions.cancelPolicies(cancel_subscriptions).buildTransaction({"chainId": int(chain_id), "from": signer_address, "nonce": nonce})
+                tx = swc.functions.setChargedTime(charged_time).buildTransaction({"chainId": int(chain_id), "from": signer_address, "nonce": nonce})
                 tx_signed = w3.eth.account.sign_transaction(tx, private_key=signer_key)
                 tx_hash = w3.eth.send_raw_transaction(tx_signed.rawTransaction)
                 tx_receipt = dict(w3.eth.wait_for_transaction_receipt(tx_hash))
                 if tx_receipt["status"] == 1:
-                    print(f"Transaction for cancelling policies in chain {chain_id} was successful. Tx hash: {tx_hash}")
+                    print(f"Transaction for setting latest charge time in chain {chain_id} was successful. Tx hash: {tx_hash}")
                 else:
-                    print(f"Transaction for cancelling policies in chain {chain_id} was unsuccessful. Tx hash: {tx_hash}")
+                    print(f"Transaction for setting latest charge time in chain {chain_id} was unsuccessful. Tx hash: {tx_hash}")
+            except Exception as e:
+                print(f"Error occurred while setting the charge time in chain {chain_id}. Error: {e}")
+
+
+            try:
+                print("\nCancelling policies =============================================================================================>>")
+                # create cancel policies tx
+                if len(cancel_subscriptions) > 0:
+                    print(f"There is/are {len(cancel_subscriptions)} account to cancel policies. Cancelling them..")
+                    print(f"Accounts: {cancel_subscriptions}")
+                    nonce = w3.eth.getTransactionCount(signer_address)
+                    tx = swc.functions.cancelPolicies(cancel_subscriptions).buildTransaction({"chainId": int(chain_id), "from": signer_address, "nonce": nonce})
+                    tx_signed = w3.eth.account.sign_transaction(tx, private_key=signer_key)
+                    tx_hash = w3.eth.send_raw_transaction(tx_signed.rawTransaction)
+                    tx_receipt = dict(w3.eth.wait_for_transaction_receipt(tx_hash))
+                    if tx_receipt["status"] == 1:
+                        print(f"Transaction for cancelling policies in chain {chain_id} was successful. Tx hash: {tx_hash}")
+                    else:
+                        print(f"Transaction for cancelling policies in chain {chain_id} was unsuccessful. Tx hash: {tx_hash}")
+            except Exception as e:
+                print(f"Error occurred while cancelling policies for chain {chain_id}. Error: {e}")
 
         except Exception as e:
             print(f"Error occurred while charging premiums for chain {chain_id}. Error: {e}")
