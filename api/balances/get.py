@@ -29,7 +29,7 @@ def verify_params(params):
 def fetch_from_zapper(params):
     zapper_response = call_to_zapper(params)
     zapper_events = parse_zapper_response(zapper_response)
-    positions_cleaned = parse_zapper_events(zapper_events)
+    positions_cleaned = parse_zapper_events(zapper_events, params)
     cache_positions(zapper_events, positions_cleaned, params['account'])
     return positions_cleaned
 
@@ -71,10 +71,11 @@ def parse_zapper_response(position_txt):
         raise Exception(f"Error parsing data. Error: {e}")
 
 # removes unnecessary info
-def parse_zapper_events(zapper_events):
+def parse_zapper_events(zapper_events, params):
     # TODO: what about the other event types?
     try:
         results = []
+        has_stakedao_app = False
         for event in zapper_events:
             if event['event'] != 'event: balance' or event['data']['appId'] == "nft" or event['data']['appId'] == "tokens":
                 continue
@@ -89,7 +90,14 @@ def parse_zapper_events(zapper_events):
                 position_info["appId"] = position["appId"]
                 position_info["network"] = position["network"]
                 position_info["balanceUSD"] = balanceUSD
+                if position['appId'] == 'stake-dao':
+                    has_stakedao_app = True
+                    position_info["balanceUSD"] += add_app_balance('stake-dao', position['network'])
                 results.append(position_info)
+
+        # PATCH: StakeDAO Liquid Locker Positions
+        if not has_stakedao_app:
+            results += add_stake_dao_lock_positions(params['account'])
         results = sorted(results, key=lambda event: -event['balanceUSD'])
         return results
     except Exception as e:
@@ -136,6 +144,45 @@ def fetch_from_s3(params, max_cache_age=86400):
     positions_cleaned = cache['positions_cleaned']
     return positions_cleaned
 
+def add_app_balance(appId, network, account):
+    try:
+        response = requests.get(f"https://api.zapper.fi/v2/apps/{appId}/balances?api_key={ZAPPER_API_KEY}&addresses[]={account}&network={network}")
+        products = response.json()['balances'][account]['products']
+
+        balance_usd = 0
+        for product in products:
+            for asset in product['assets']:
+                if asset['type'] == 'contract-position':
+                    if asset['balanceUSD'] == 0:
+                        continue
+                    balance_usd += asset['balanceUSD']
+
+        return balance_usd
+    except:
+        return []
+
+def add_stake_dao_lock_positions(account):
+    try:
+        response = requests.get(f"https://api.zapper.fi/v2/apps/stake-dao/balances?api_key={ZAPPER_API_KEY}&addresses[]={account}")
+        products = response.json()['balances'][account]['products']
+
+        position_balance_by_network = {}
+        for product in products:
+            for asset in product['assets']:
+                if asset['type'] == 'contract-position':
+                    if asset['balanceUSD'] == 0:
+                        continue
+                    if asset['network'] not in position_balance_by_network:
+                        position_balance_by_network[asset['network']] = 0
+                    position_balance_by_network[asset['network']] = position_balance_by_network[asset['network']] + asset['balanceUSD']
+
+        positions = []
+        for k, v in position_balance_by_network.items():
+            positions.append({'appId': 'stake-dao', 'network': k, 'balanceUSD': v})
+        return positions
+    except:
+        return []
+
 # returns the balances of an account
 # attempts to read from cache before reading from zapper
 def get_balances(params, max_cache_age=86400):
@@ -177,3 +224,4 @@ def handler(event, context):
         return handle_error(event, e, 400)
     except Exception as e:
         return handle_error(event, e, 500)
+
